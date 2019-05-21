@@ -47,9 +47,10 @@ summary(cars)
 
 ## Including Plots
 
-You can also embed plots, for example:
+You can also embed plots, for
+example:
 
-![](Credit_Problem_1_EDA_files/figure-gfm/pressure-1.png)<!-- -->
+![](Credit_Problem_2_Tree_Models_files/figure-gfm/pressure-1.png)<!-- -->
 
 Note that the `echo = FALSE` parameter was added to the code chunk to
 prevent printing of the R code that generated the plot.
