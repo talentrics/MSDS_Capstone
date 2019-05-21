@@ -1,12 +1,8 @@
 ---
-title: "Credit Problem - Exploratory Analysis"
-author: "Daniel Macdonald"
+title: "Credit Problem - Random Forest & Boosting"
+author: "Daniel Macdonald @talentrics"
 date: "5/21/2019"
-output: 
-  github_document:
-    toc: true
-    toc_depth: 3
-    
+output: github_document
 ---
 
 ### Project Description
@@ -15,10 +11,10 @@ This notebook is the first of 3 published for my [MSDS Capstone Project](https:/
 Source data: [‘Default of Credit Card Clients Data Set’](https://archive.ics.uci.edu/ml/datasets/default+of+credit+card+clients){target="_blank"} posted on the UCI Machine Learning Repository.   
    
 **Below is a summary of the notebooks published in relation to this project:**    
-    * [EDA & Data Transformation](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md){target="_blank"} **(This Notebook)**     
-    * Random Forest and Gradient Boosting Analysis   
-    * Regression and Principal Components Analysis  
-    * Summary: Model Development Guide (PDF)
+    * [EDA & Data Transformation](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md){target="_blank"}      
+    * [Random Forest and Gradient Boosting Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_2_Tree_Models.md){target="_blank"} **(This Notebook)**   
+    * [Regression and Principal Components Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_3_Regression_Models.md){target="_blank"}  
+    * [Summary: Model Development Guide (PDF)](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_4_Model_Development_Guide.pdf){target="_blank"}
 
 ### Part 1 Data Overview
 

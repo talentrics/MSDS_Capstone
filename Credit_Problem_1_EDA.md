@@ -1,6 +1,6 @@
-Credit Problem - Exploratory Analysis
+Credit Problem - EDA & Data Transformation
 ================
-Daniel Macdonald
+Daniel Macdonald @talentrics
 5/21/2019
 
 ### Project Description
@@ -17,9 +17,12 @@ project:**
 \* [EDA & Data
 Transformation](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md)
 **(This Notebook)**  
-\* Random Forest and Gradient Boosting Analysis  
-\* Regression and Principal Components Analysis  
-\* Summary: Model Development Guide (PDF)
+\* [Random Forest and Gradient Boosting
+Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_2_Tree_Models.md)  
+\* [Regression and Principal Components
+Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_3_Regression_Models.md)  
+\* [Summary: Model Development Guide
+(PDF)](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_4_Model_Development_Guide.pdf)
 
 ### Part 1 Data Overview
 
