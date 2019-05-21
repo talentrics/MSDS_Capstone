@@ -1,4 +1,4 @@
-Credit Problem - Regression & Principal Components Analysis
+Credit Problem - Regression & PCA
 ================
 Daniel Macdonald @talentrics
 5/21/2019
