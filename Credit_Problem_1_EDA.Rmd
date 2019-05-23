@@ -30,29 +30,923 @@ These notebooks support analysis published in the [Summary: Model Development Gu
 This notebook summarizes Exploratory Data Analysis and Data Tranformation.   
 Model development and testing of predictions in notebooks linked above.
 
-### Part 1 Data Overview
+### Raw Data Review
 
+Data installed from RData file saved on local computer.  File used for Capstone project is unique compared to raw data on UCI data to apply consistent train/test/validate split.  Project specific file can be found in the [github repository/data.](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/data/credit_card_default.RData){target="_blank"}   
+```{r}
+# Read the RData object using readRDS();
+credit_card_default <- readRDS('/Users/talentrics/credit_card_default.RData')
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# Show dataframe structure;
+str(credit_card_default)
 ```
 
-## R Markdown
+Install woeBinning, ggplot2 & create multiplot function for future plotting
+```{r message=FALSE,warning=FALSE}
+#install.packages('woeBinning',dependencies=TRUE)
+library(woeBinning)
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+#install.packages("dplyr")
+library(dplyr)
+library(ggplot2)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+## MultiPlot Function: 
+MultiPlot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  require(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
 
-```{r cars}
-summary(cars)
+
 ```
 
-## Including Plots
+Rename data set > update column names > plot distributions
+```{r message=FALSE,warning=FALSE}
 
-You can also embed plots, for example:
+#rename data set
+raw.data <- credit_card_default
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+#update column name for 'PAY_0' to 'PAY_1'
+colnames(raw.data)[which(colnames
+    (raw.data) == 'PAY_0')] <- 'PAY_1'
+
+# Converting columns to factors according to the data description 
+pay.cols.names  <- paste0("PAY_", c(1:6))  # "PAY_1" "PAY_2" "PAY_3"...
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Explore & Transform - LIMIT_BAL
+**data description:** integer - individual consumer credit & supplementary credit in NT Dollar
+```{r message=FALSE,warning=FALSE}
+summary(raw.data$LIMIT_BAL)
+```
+**Histogram - LIMIT_BAL**
+```{r message=FALSE,warning=FALSE}
+# Getting ID and LIMIT_BAL columns only
+limit.raw.data <- raw.data[c(2)]
+
+# Generating a histogram for the LIMIT_BAL variable with a vertical cutoff line
+limit.hist.plot <-
+  ggplot(data = limit.raw.data, 
+         aes(x = limit.raw.data$LIMIT_BAL)) +
+  geom_histogram(binwidth = 10000,
+                 colour = "black", fill = "white") +
+  geom_vline(aes(xintercept = 50000), 
+             colour = "#BB0000", linetype = "dashed") +
+  geom_vline(aes(xintercept = 240000), 
+             colour = "#BB0000", linetype = "dashed") +
+  theme_minimal() +
+  xlim(0,600000) +
+  xlab("LIMIT_BAL")
+
+# Printing both plots near each other
+MultiPlot(limit.hist.plot, cols = 1)
+```
+   
+**bin analysis - LIMIT BAL** - investigate binning options for variable split
+```{r message=FALSE,warning=FALSE}
+# Check bins LIMIT_BAL
+LIMIT_BAL.bins <- raw.data[,c("LIMIT_BAL","DEFAULT")]
+
+LIMIT_BAL.bin <- woe.binning(df=LIMIT_BAL.bins,target.var=c("DEFAULT"),
+                               pred.var=c("LIMIT_BAL"))
+
+table_limit <- as.data.frame(woe.binning.table(LIMIT_BAL.bin))
+table_limit <- table_limit[,-c(6:7,10)]
+colnames(table_limit) <- c('Final.Bin','Total.Count','Distr','0.Count','1.Count','Rate','WOE')
+table_limit
+```
+   
+**recommended transformation - LIMIT_BAL** Dummy variables if LIMIT_BAL is below 30k or above 60k   
+Leave out >30k & < 160k as cross correlation would render this variable irrelevant.
+```{r message=FALSE,warning=FALSE}
+raw.data$LIMIT_BAL_below_30k <- ifelse(raw.data$LIMIT_BAL <= 30000,1,0)
+raw.data$LIMIT_BAL_above_160k <- ifelse(raw.data$LIMIT_BAL > 160000,1,0)
+summary((raw.data[,c('LIMIT_BAL_below_30k','LIMIT_BAL_above_160k')]))
+```
+**Binning for regression analysis - in case of tree analysis, continuous variable recommended.**   
+## Explore & Transform - Demographics: 
+**data descriptions:**   
+**SEX** Categorical: (1) = Male; (2) = Female   
+**EDUCATION** Categorical: (1) = graduate school; (2) = university; (3) = high school; (4) = others   
+**MARRIAGE** Categorical: (1) = married; (2) = single; (3) = others   
+```{r message=FALSE,warning=FALSE}
+summary(raw.data[,c(3:5)])
+```
+**Histogram: SEX, EDUCATION, MARRIAGE**
+```{r message=FALSE,warning=FALSE}
+# Getting social predictors only 
+dem.raw.data <- raw.data[,c(3:5)]
+
+# Generating bar plots for social predictors (SEX, EDUCATION, MARRIAGE)
+dem.histograms <- 
+  lapply(colnames(dem.raw.data), 
+         function (pay.col.name){ 
+           ggplot(data = raw.data[, pay.cols.names], 
+                  aes(x = raw.data[, pay.col.name])) +
+             geom_bar(stat = "count") + 
+             theme_minimal() +
+             xlab(pay.col.name) +
+             ylab("Observations count")
+         })
+MultiPlot(plotlist = dem.histograms, cols = 3)
+```
+**Categorical frequency - EDUCATION**
+```{r message=FALSE,warning=FALSE}
+ed_summary <-raw.data[,c(4)]
+ed_table <- as.data.frame(table(ed_summary))
+colnames(ed_table) <- c('EDUCATION','Freq')
+ed_table$PCT <- ed_table$Freq/30000
+ed_table$PCT <- paste(round(ed_table$PCT*100,digits=1),"%",sep="")
+ed_table
+```
+
+**observations & recommendations for transformation:** 
+   
+**SEX** predominately female, suggestion to change categories to (0) = male; (1) = female 
+```{r message=FALSE,warning=FALSE}
+raw.data$SEX_FEMALE <- ifelse(raw.data$SEX == 2,1,0)
+```
+
+**MARRIAGE** 'other' values (0) & (3) outliers - change categories to (1) = Married; (0) = Not Married
+
+```{r message=FALSE,warning=FALSE}
+raw.data$Married_Y <- ifelse(raw.data$MARRIAGE == 1,1,0)
+summary(raw.data$Married_Y)
+```
+
+**EDUCATION**  un-defined values (0), (5), & (6) ~1.1% - change all 'other' to category (0)
+```{r message=FALSE,warning=FALSE}
+ed_df3 <- raw.data[,c(4,25)]
+ed_df3$EDUCATION[ed_df3$EDUCATION>3 ] <- 0
+ed_table2 <- as.data.frame(table(ed_df3$EDUCATION))
+colnames(ed_table2) <- c('EDUCATION','Freq')
+ed_table2$PCT <- ed_table2$Freq/30000
+ed_table2$PCT <- paste(round(ed_table2$PCT*100,digits=1),"%",sep="")
+ed_table2
+```
+
+**EDUCATION - bin analysis** - investigate binning options for variable split
+```{r message=FALSE,warning=FALSE}
+ED.bin <- woe.binning(df=ed_df3,target.var=c("DEFAULT"),pred.var=c("EDUCATION"))
+table1 <- as.data.frame(woe.binning.table(ED.bin))
+table1 <- table1[,-c(6:7,10)]
+colnames(table1) <- c('Final.Bin','Total.Count','Distr','0.Count','1.Count','Rate','WOE')
+table1
+```
+**EDUCATION - recommended transformation** Reduce variable to two classes:
+**$ED_Grad_Other** = (0) = high school/university; (1) = Graduate/Other
+```{r message=FALSE,warning=FALSE}
+raw.data$ED_Grad_other <- ifelse((raw.data$EDUCATION < 1) | 
+                             (raw.data$EDUCATION > 3) |(raw.data$EDUCATION == 1),1,0)
+ed_table3 <- as.data.frame(table(raw.data$ED_Grad_other))
+colnames(ed_table3) <- c('EDUCATION','Freq')
+ed_table3$PCT <- ed_table3$Freq/30000
+ed_table3$PCT <- paste(round(ed_table3$PCT*100,digits=1),"%",sep="")
+ed_table3
+```
+
+## Explore & Transform - AGE
+
+**data description:** integer - age of customer in years
+```{r message=FALSE,warning=FALSE}
+summary(raw.data$AGE)
+```
+**Histogram - AGE**
+```{r message=FALSE,warning=FALSE}
+# Getting ID and AGE columns only
+age.raw.data <- raw.data[c(1,6)]
+
+# Generating a histogram for the AGE variable with a vertical cutoff line
+age.hist.plot <-
+  ggplot(data = age.raw.data, 
+         aes(x = age.raw.data$AGE)) +
+  geom_histogram(binwidth = 1,
+                 colour = "black", fill = "white") +
+  geom_vline(aes(xintercept = 28), 
+             colour = "#BB0000", linetype = "dashed") +
+  geom_vline(aes(xintercept = 41), 
+             colour = "#BB0000", linetype = "dashed") +
+  theme_minimal() +
+  xlab("Age")
+
+# Printing both plots near each other
+MultiPlot(age.hist.plot, cols = 1)
+```
+**bin analysis - AGE** - investigate binning options for variable split
+```{r message=FALSE,warning=FALSE}
+# Check bins LIMIT_BAL
+AGE.bins <- raw.data[,c("AGE","DEFAULT")]
+
+AGE.bin <- woe.tree.binning(df=AGE.bins,target.var=c("DEFAULT"),
+                               pred.var=c("AGE"))
+
+table_AGE <- as.data.frame(woe.binning.table(AGE.bin))
+table_AGE <- table_AGE[,-c(6:7,10)]
+colnames(table_AGE) <- c('Final.Bin','Total.Count','Distr','0.Count','1.Count','Rate','WOE')
+table_AGE
+```
+**recommended transformation - AGE** Dummy variables if AGE is below 25, 25:35 & above 40   
+Leave out >35 & < 40 as cross correlation would render this variable irrelevant.
+```{r message=FALSE,warning=FALSE}
+raw.data$AGE_below_25 <- ifelse(raw.data$AGE <= 25,1,0)
+raw.data$AGE_25to35 <- ifelse((raw.data$AGE > 25) &
+                                (raw.data$AGE <=35),1,0)
+raw.data$AGE_above_40 <- ifelse(raw.data$AGE > 40,1,0)
+
+summary(raw.data[,c('AGE_below_25','AGE_25to35','AGE_above_40')])
+```
+**Binning for regression analysis - in case of tree analysis, continuous variable recommended.**
+
+## Explore & Transform - 'PAY_X' variables 
+**data description:** 0 = 'on time payment' - positive #'s = months payment delay.
+```{r message=FALSE,warning=FALSE}
+summary(raw.data[,c(7:9)])
+```
+
+```{r message=FALSE,warning=FALSE}
+summary(raw.data[,c(10:12)])
+```
+
+**Histogram - PAY_X Variables**
+```{r message=FALSE,warning=FALSE}
+# Converting columns to factors according to the data description 
+pay.cols.names  <- paste0("PAY_", c(1:6))  # "PAY_1" "PAY_2" "PAY_3"...
+
+# Generating bar plots for PAY_0..6 variables 
+pay.histograms <- 
+  lapply(pay.cols.names, 
+         function (pay.col.name){ 
+           ggplot(data = raw.data[, pay.cols.names], 
+                  aes(x = raw.data[, pay.col.name])) +
+             geom_bar(stat = "count") + 
+             theme_minimal() +
+             xlab(paste0("Repayment status ", pay.col.name)) +
+             ylab("Observations count")
+         })
+
+MultiPlot(plotlist = pay.histograms, cols = 3)
+```
+**observation PAY_X:** negative numbers to -2 (assumption of pre-payment) up to +8 (default)   
+High cross correlation between PAY_X variables - recommend to summarize PAY_X
+```{r message=FALSE,warning=FALSE}
+# check correlation of PAY_X Sum Variable
+PAY_X.correlation <- cor(raw.data[,c('PAY_1','PAY_2',
+            'PAY_3','PAY_4','PAY_5','PAY_6','DEFAULT')])
+PAY_X.correlation <- as.data.frame(PAY_X.correlation)
+PAY_X.correlation <- PAY_X.correlation[7]
+PAY_X.correlation
+```
+
+**recommended transformation - PAY_X** create **$PAY_X_Sum_6mo** variable
+```{r message=FALSE,warning=FALSE}
+raw.data$PAY_X_Sum_6mo <- rowSums(cbind(raw.data$PAY_1,raw.data$PAY_2,
+                                  raw.data$PAY_3,raw.data$PAY_4,
+                                  raw.data$PAY_5,raw.data$PAY_6))
+summary(raw.data$PAY_X_Sum_6mo)
+```
+**bin analysis - PAY_X_Sum_6mo** - investigate binning options for variable split
+```{r message=FALSE,warning=FALSE}
+# check WOE recommended binning and correlation in PAY_X
+PAY_X_bins <- raw.data[,c("PAY_X_Sum_6mo","DEFAULT")]
+PAY_X_bin <- woe.tree.binning(df=PAY_X_bins,target.var=c("DEFAULT"),
+                             pred.var=c("PAY_X_Sum_6mo"))
+
+PAY_X_bin_table <- as.data.frame(woe.binning.table(PAY_X_bin))
+
+table_X <- PAY_X_bin_table[,-c(6:7,10)]
+colnames(table_X) <- c('Final.Bin','Total.Count','Distr',
+                       '0.Count','1.Count','Rate','WOE')
+table_X
+```
+**recommended transformation - PAY_X_Sum_6mo** Dummy variables if PAY_X_sum is below 0 or above 5   
+Leave out > 0 to <=5 as cross correlation would render this variable irrelevant.
+```{r message=FALSE,warning=FALSE}
+# bin the Sum as recommended and check correlation
+raw.data$PAY_X_Sum_6mo_belowZero <- ifelse(raw.data$PAY_X_Sum_6mo <= 0,1,0)
+raw.data$PAY_X_Sum_6mo_aboveFive <- ifelse(raw.data$PAY_X_Sum_6mo > 5,1,0)
+summary(raw.data[,c('PAY_X_Sum_6mo_belowZero','PAY_X_Sum_6mo_aboveFive')])
+```
+**observation - PAY_X_Sum_6mo:** binning PAY_X_Sum as per WOE maximizes correlation variance   
+```{r message=FALSE,warning=FALSE}
+# check correlation of PAY_X Sum Variable
+PAY_X.correlation2 <- cor(raw.data[,c('PAY_X_Sum_6mo_belowZero',
+                          'PAY_X_Sum_6mo_aboveFive','DEFAULT')])
+PAY_X.correlation2 <- as.data.frame(PAY_X.correlation2)
+PAY_X.correlation2 <- PAY_X.correlation2[3]
+PAY_X.correlation2
+```
+**Binning for regression analysis - in case of tree analysis, continuous variable recommended.**   
+
+## Explore & Transform - Bill_AMTX
+**data description:** the amount of Bill Statement for 6 months April (1) to September (6)   
+```{r message=FALSE,warning=FALSE}
+summary(raw.data[,c(13:15)])
+```
+
+```{r message=FALSE,warning=FALSE}
+summary(raw.data[,c(16:18)])
+```
+**Histogram - BILL_AMTX Variables**
+```{r}
+# Getting BILL_AMT1..6 columns only
+bill.raw.data <- raw.data[c(13:18)]  
+
+# Calculate cutoffs for the "rule of thumb"
+(r.thumb.cutoffs <-
+    apply(bill.raw.data, 2, function (t){
+      c(Q1 = quantile(t, .25) - 1.5 * IQR(t),
+        Q3 = quantile(t, .75) + 1.5 * IQR(t))
+    }
+    ) %>% t())
+```
+
+```{r message=FALSE,warning=FALSE}
+
+## Drawing histograms with cutoff lines ##
+HistogramsFromVariables <- 
+  function(data.columns, cutoffs.table = data.frame(), 
+           bin.width = 5000, text = "") {
+    # Generates list of ggplot histograms with vertical lines (cutoffs.table)
+    #
+    # Args:
+    #   data.columns:  variables
+    #   cutoffs.table: table with values for drawing vertical lines
+    #   bin.width:     bin size for histograms. 
+    #   text:          comment for the x axe 
+    #
+    # Returns:
+    #   List of ggplot objects
+    lapply(colnames(data.columns),
+           function (col.name){ 
+             h <- ggplot(data = data.columns, 
+                         aes(x = data.columns[, col.name])) +
+               geom_histogram(binwidth = bin.width, 
+                              colour = "black", fill = "white") +
+               theme_minimal() +
+               xlab(paste0(text, " ", col.name, " ")) +
+               ylab("Obs. count") 
+             
+             # Adjusting plot to data contained in cutoffs.table:
+             # two, one or without cutoffs
+             if (dim(cutoffs.table)[1] > 1) {
+               h + geom_vline(aes(xintercept = cutoffs.table[col.name, "Q1.25%"]), 
+                              colour = "#BB0000", linetype = "dashed") +
+                 geom_vline(aes(xintercept = cutoffs.table[col.name, "Q3.75%"]), 
+                            colour = "#BB0000", linetype = "dashed")  
+             } else if (dim(cutoffs.table)[1] == 1) {
+               h + geom_vline(aes(xintercept = cutoffs.table[1, col.name]), 
+                              colour = "#BB0000", linetype = "dashed")
+             } else {
+               return(h)
+             }
+           })
+  }
+
+# Collecting indexes to remove
+to.remove.indexes <- 
+  lapply(colnames(bill.raw.data),
+         function (bill.col.name){
+           which(bill.raw.data[, bill.col.name] > 
+                   r.thumb.cutoffs[bill.col.name, "Q3.75%"] + 220000 |
+                   bill.raw.data[, bill.col.name] < 
+                   r.thumb.cutoffs[bill.col.name, "Q1.25%"])
+         }
+  ) %>% unlist()
+
+# Getting BILL_AMT1..6 columns without outliers
+bill.raw.data <- bill.raw.data[-to.remove.indexes, ]
+
+# Collecting observation indexes to remove from 
+# the main data
+to.remove.indexes.total <- to.remove.indexes  
+
+# Plot Bill_AMT(X) #
+MultiPlot(plotlist = HistogramsFromVariables(bill.raw.data, 
+            r.thumb.cutoffs, text = "Amount of bill statement"),cols = 2)
+```
+
+
+**observation - BILL_AMTX:** ...  
+High cross correlation between BILL_X variables - recommend to summarize BILL_X
+```{r message=FALSE,warning=FALSE}
+# check correlation of BILL_X Sum Variable
+BILL_X.correlation <- cor(raw.data[,c('BILL_AMT1','BILL_AMT2',
+            'BILL_AMT3','BILL_AMT4','BILL_AMT5','BILL_AMT6','DEFAULT')])
+BILL_X.correlation <- as.data.frame(BILL_X.correlation)
+BILL_X.correlation <- BILL_X.correlation[7]
+BILL_X.correlation
+```
+
+**recommended transformation - BILL_AMTX** develop variable to capture bill/pay ratio
+```{r message=FALSE,warning=FALSE}
+# option 1: sum of all bill values
+raw.data$BILL_SUM <- rowSums(cbind(raw.data$BILL_AMT1,raw.data$BILL_AMT2,
+                                  raw.data$BILL_AMT3,raw.data$BILL_AMT4,
+                                  raw.data$BILL_AMT5,raw.data$BILL_AMT6))
+# option 2: average bill amt
+raw.data$Avg_Bill_Amt <- raw.data$BILL_SUM/6
+# option 3: max bill over 6 months
+## Create column Max_Bill_Amt ##
+raw.data$Max_Bill_Amt <- pmax(raw.data$BILL_AMT1,raw.data$BILL_AMT2,
+                              raw.data$BILL_AMT3,raw.data$BILL_AMT4,
+                              raw.data$BILL_AMT5,raw.data$BILL_AMT6)
+```
+**BILL_X - analyze most highly correlated variable type**
+```{r}
+# check correlation of BILL_X Sum Variable
+BILL_X.correlation <- cor(raw.data[,c('BILL_SUM','Avg_Bill_Amt',
+                                      'Max_Bill_Amt','DEFAULT')])
+BILL_X.correlation <- as.data.frame(BILL_X.correlation)
+BILL_X.correlation <- BILL_X.correlation[4]
+BILL_X.correlation
+```
+   
+**Histogram - Max_Bill_Amt**
+```{r}
+Max_bill_df <- raw.data[,c('ID','Max_Bill_Amt')]
+
+summary(Max_bill_df$Max_Bill_Amt)
+```
+
+**bin analysis - Max_Bill_Amt** - investigate binning options for variable split
+```{r message=FALSE,warning=FALSE}
+# check WOE recommended binning and correlation in PAY_X
+Max_Bill_bins <- raw.data[,c("Max_Bill_Amt","DEFAULT")]
+Max_Bill_bin <- woe.binning(df=Max_Bill_bins,target.var=c("DEFAULT"),
+                             pred.var=c("Max_Bill_Amt"))
+
+Max_Bill_bin_table <- as.data.frame(woe.binning.table(Max_Bill_bin))
+
+Max_Bill_table <- Max_Bill_bin_table[,-c(6:7,10)]
+colnames(Max_Bill_table) <- c('Final.Bin','Total.Count','Distr',
+                       '0.Count','1.Count','Rate','WOE')
+Max_Bill_table
+```
+   
+**recommended transformation - Max_Bill_Amt** Create bins for Max_Bill variable as per WOE max  
+Leave out > 21k & <= 52k as cross correlation would render this variable irrelevant.   
+```{r message=FALSE,warning=FALSE}
+# bin the Sum as recommended and check correlation
+raw.data$Max_Bill_Amt_below_600 <- ifelse(raw.data$Max_Bill_Amt <= 600,1,0)
+raw.data$Max_Bill_Amt_below_4k <- ifelse(raw.data$Max_Bill_Amt > 600 &
+                                           raw.data$Max_Bill_Amt <= 4000,1,0)
+raw.data$Max_Bill_Amt_below_18k <- ifelse(raw.data$Max_Bill_Amt > 4000 &
+                                            raw.data$Max_Bill_Amt <=18400,1,0)
+raw.data$Max_Bill_Amt_below_21k <- ifelse(raw.data$Max_Bill_Amt > 18400 &
+                                            raw.data$Max_Bill_Amt <=21000,1,0)
+raw.data$Max_Bill_Amt_above_52k <- ifelse(raw.data$Max_Bill_Amt > 52000,1,0)
+summary(raw.data[,c('Max_Bill_Amt_below_600','Max_Bill_Amt_below_4k',
+                   'Max_Bill_Amt_below_18k','Max_Bill_Amt_below_21k',
+                   'Max_Bill_Amt_above_52k')])
+```
+**observation - Max_Bill_Amt:** binning PAY_X_Sum as per WOE maximizes correlation variance   
+```{r message=FALSE,warning=FALSE}
+# check correlation of PAY_X Sum Variable
+Max_Bill.correlation <- cor(raw.data[,c('Max_Bill_Amt_below_600',
+                          'Max_Bill_Amt_below_4k','Max_Bill_Amt_below_18k',
+                          'Max_Bill_Amt_below_21k','Max_Bill_Amt_above_52k',
+                          'DEFAULT')])
+Max_Bill.correlation <- as.data.frame(Max_Bill.correlation)
+Max_Bill.correlation <- Max_Bill.correlation[6]
+Max_Bill.correlation
+```
+**Binning for regression analysis - in case of tree analysis, continuous variable recommended.** 
+
+## Explore & Transform - PAY_AMTX
+**data description:** the amount Paid against prior Bill (x-1) for 6 months April (1) to September (6)   
+```{r message=FALSE,warning=FALSE}
+summary(raw.data[,c(19:21)])
+```
+
+```{r message=FALSE,warning=FALSE}
+summary(raw.data[,c(22:24)])
+```
+**Histogram - PAY_AMTX Variables**
+```{r}
+# Getting PAY_AMTX1..6 columns only
+pay_amt <- raw.data[c(19:24)]  
+
+# Calculate cutoffs for the "rule of thumb"
+(r.thumb.cutoffs <-
+    apply(pay_amt, 2, function (t){
+      c(Q1 = quantile(t, .25) - 1.5 * IQR(t),
+        Q3 = quantile(t, .75) + 1.5 * IQR(t))
+    }
+    ) %>% t())
+```
+
+```{r message=FALSE,warning=FALSE}
+
+## Drawing histograms with cutoff lines ##
+HistogramsFromVariables <- 
+  function(data.columns, cutoffs.table = data.frame(), 
+           bin.width = 1000, text = "") {
+    # Generates list of ggplot histograms with vertical lines (cutoffs.table)
+    #
+    # Args:
+    #   data.columns:  variables
+    #   cutoffs.table: table with values for drawing vertical lines
+    #   bin.width:     bin size for histograms. 
+    #   text:          comment for the x axe 
+    #
+    # Returns:
+    #   List of ggplot objects
+    lapply(colnames(data.columns),
+           function (col.name){ 
+             h <- ggplot(data = data.columns, 
+                         aes(x = data.columns[, col.name])) +
+               geom_histogram(binwidth = bin.width, 
+                              colour = "black", fill = "white") +
+               theme_minimal() +
+               xlab(paste0(text, " ", col.name, " ")) +
+               ylab("Obs. count") 
+             
+             # Adjusting plot to data contained in cutoffs.table:
+             # two, one or without cutoffs
+             if (dim(cutoffs.table)[1] > 1) {
+               h + geom_vline(aes(xintercept = cutoffs.table[col.name, "Q1.25%"]), 
+                              colour = "#BB0000", linetype = "dashed") +
+                 geom_vline(aes(xintercept = cutoffs.table[col.name, "Q3.75%"]), 
+                            colour = "#BB0000", linetype = "dashed")  
+             } else if (dim(cutoffs.table)[1] == 1) {
+               h + geom_vline(aes(xintercept = cutoffs.table[1, col.name]), 
+                              colour = "#BB0000", linetype = "dashed")
+             } else {
+               return(h)
+             }
+           })
+  }
+
+# Collecting indexes to remove
+to.remove.indexes <- 
+  lapply(colnames(pay_amt),
+         function (pay.col.name){
+           which(pay_amt[, pay.col.name] > 
+                   r.thumb.cutoffs[pay.col.name, "Q3.75%"] + 25000 |
+                   pay_amt[, pay.col.name] < 
+                   r.thumb.cutoffs[pay.col.name, "Q1.25%"])
+         }
+  ) %>% unlist()
+
+# Getting BILL_AMT1..6 columns without outliers
+pay_amt <- pay_amt[-to.remove.indexes, ]
+
+# Collecting observation indexes to remove from 
+# the main data
+to.remove.indexes.total <- to.remove.indexes  
+
+# Plot Bill_AMT(X) #
+MultiPlot(plotlist = HistogramsFromVariables(pay_amt, 
+            r.thumb.cutoffs, text = "Amount Paid"),cols = 2)
+```
+
+
+**observation - PAY_AMTX:** ...  
+High cross correlation between BILL_X variables - recommend to summarize BILL_X
+```{r message=FALSE,warning=FALSE}
+# check correlation of BILL_X Sum Variable
+PAY_AMTX.correlation <- cor(raw.data[,c('PAY_AMT1','PAY_AMT2',
+            'PAY_AMT3','PAY_AMT4','PAY_AMT5','PAY_AMT6','DEFAULT')])
+PAY_AMTX.correlation <- as.data.frame(PAY_AMTX.correlation)
+PAY_AMTX.correlation <- PAY_AMTX.correlation[7]
+PAY_AMTX.correlation
+```
+
+**recommended transformation - PAY_AMTX** develop variable to capture pay ratio
+```{r message=FALSE,warning=FALSE}
+# option 1: sum of all bill values
+raw.data$PMT_SUM <- rowSums(cbind(raw.data$PAY_AMT1,raw.data$PAY_AMT2,
+                                  raw.data$PAY_AMT3,raw.data$PAY_AMT4,
+                                  raw.data$PAY_AMT5,raw.data$PAY_AMT6))
+# option 2: average bill amt
+raw.data$Avg_Pmt_Amt <- raw.data$PMT_SUM/6
+# option 3: max bill over 6 months
+## Create column Max_Bill_Amt ##
+raw.data$Max_Pmt_Amt <- pmax(raw.data$PAY_AMT1,raw.data$PAY_AMT2,
+                                  raw.data$PAY_AMT3,raw.data$PAY_AMT4,
+                                  raw.data$PAY_AMT5,raw.data$PAY_AMT6)
+```
+**PAY_AMTX - analyze most highly correlated variable type**
+```{r}
+# check correlation of BILL_X Sum Variable
+PAY_AMTX.correlation <- cor(raw.data[,c('PMT_SUM','Avg_Pmt_Amt',
+                                      'Max_Pmt_Amt','DEFAULT')])
+PAY_AMTX.correlation <- as.data.frame(PAY_AMTX.correlation)
+PAY_AMTX.correlation <- PAY_AMTX.correlation[4]
+PAY_AMTX.correlation
+```
+   
+**Histogram - Avg_Pmt_Amt**
+```{r}
+Avg_Pmt_df <- raw.data[,c('ID','Avg_Pmt_Amt')]
+summary(Avg_Pmt_df$Avg_Pmt_Amt)
+```
+
+**bin analysis - Max_Bill_Amt** - investigate binning options for variable split
+```{r message=FALSE,warning=FALSE}
+# check WOE recommended binning and correlation in PAY_X
+Avg_Pmt_bins <- raw.data[,c("Avg_Pmt_Amt","DEFAULT")]
+Avg_Pmt_bin <- woe.binning(df=Avg_Pmt_bins,target.var=c("DEFAULT"),
+                             pred.var=c("Avg_Pmt_Amt"))
+
+Avg_Pmt_bin_table <- as.data.frame(woe.binning.table(Avg_Pmt_bin))
+
+Avg_Pmt_bin_table <- Avg_Pmt_bin_table[,-c(6:7,10)]
+colnames(Avg_Pmt_bin_table) <- c('Final.Bin','Total.Count','Distr',
+                       '0.Count','1.Count','Rate','WOE')
+Avg_Pmt_bin_table
+```
+   
+**recommended transformation - Max_Bill_Amt** Create bins for Avg_Pmt variable as per WOE max  
+Leave out > 2k & <= 12k as cross correlation would render this variable irrelevant.   
+```{r message=FALSE,warning=FALSE}
+# bin the Sum as recommended and check correlation
+raw.data$Avg_Pmt_Amt_below2k <- ifelse(raw.data$Avg_Pmt_Amt <= 2045,1,0)
+raw.data$Avg_Pmt_Amt_above12k <- ifelse(raw.data$Avg_Pmt_Amt > 12000,1,0)
+
+summary(raw.data[,c('Avg_Pmt_Amt_below2k','Avg_Pmt_Amt_above12k')])
+```
+**observation - Max_Bill_Amt:** binning PAY_X_Sum as per WOE maximizes correlation variance   
+```{r message=FALSE,warning=FALSE}
+# check correlation of PAY_X Sum Variable
+Avg_Pmt.correlation <- cor(raw.data[,c('Avg_Pmt_Amt_below2k',
+                                       'Avg_Pmt_Amt_above12k','DEFAULT')])
+Avg_Pmt.correlation <- as.data.frame(Avg_Pmt.correlation)
+Avg_Pmt.correlation <- Avg_Pmt.correlation[3]
+Avg_Pmt.correlation
+```
+**Binning for regression analysis - in case of tree analysis, continuous variable recommended.**
+
+## Create new variable: Avg_Util
+**data description Avg_Util**  amount of balance limit used (BILL_AMTX/LIMIT_BAL)
+```{r message=FALSE,warning=FALSE}
+raw.data$Util_Bill_1 <- raw.data$BILL_AMT1 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_2 <- raw.data$BILL_AMT2 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_3 <- raw.data$BILL_AMT3 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_4 <- raw.data$BILL_AMT4 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_5 <- raw.data$BILL_AMT5 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_6 <- raw.data$BILL_AMT6 / raw.data$LIMIT_BAL
+
+raw.data$Util_SUM = rowSums(cbind(raw.data$Util_Bill_1,raw.data$Util_Bill_2,
+                            raw.data$Util_Bill_3,raw.data$Util_Bill_4,
+                            raw.data$Util_Bill_5,raw.data$Util_Bill_6))
+
+raw.data$Avg_Util <- raw.data$Util_SUM/6
+summary(raw.data$Avg_Util)
+```
+**Histogram - Avg_Util**
+```{r message=FALSE,warning=FALSE}
+# Getting ID and Avg_Util columns only
+Avg_Util_df <- raw.data[c('Avg_Util')]
+
+# Generating a histogram for the LIMIT_BAL variable with a vertical cutoff line
+Avg_Util.hist.plot <-
+  ggplot(data = Avg_Util_df, 
+         aes(x = Avg_Util_df$Avg_Util)) +
+  geom_histogram(binwidth = .1,
+                 colour = "black", fill = "white") +
+  geom_vline(aes(xintercept = .03), 
+             colour = "#BB0000", linetype = "dashed") +
+  geom_vline(aes(xintercept = .68), 
+             colour = "#BB0000", linetype = "dashed") +
+  theme_minimal() +
+  xlim(-0.1,1) +
+  xlab("Avg_Util")
+
+# Printing both plots near each other
+MultiPlot(Avg_Util.hist.plot, cols = 1)
+```
+
+**bin analysis - Avg_Util** - investigate binning options for variable split
+```{r message=FALSE,warning=FALSE}
+# check WOE recommended binning and correlation in PAY_X
+Avg_Util_bins <- raw.data[,c("Avg_Util","DEFAULT")]
+Avg_Util_bin <- woe.binning(df=Avg_Util_bins,target.var=c("DEFAULT"),
+                             pred.var=c("Avg_Util"))
+
+Avg_Util_bin_table <- as.data.frame(woe.binning.table(Avg_Util_bin))
+
+Avg_Util_bin_table <- Avg_Util_bin_table[,-c(6:7,10)]
+colnames(Avg_Util_bin_table) <- c('Final.Bin','Total.Count','Distr',
+                       '0.Count','1.Count','Rate','WOE')
+Avg_Util_bin_table
+```
+**recommended transformation - Avg_Util** Create bins for Avg_Util variable as per WOE max  
+Leave out > .001 & <= .45 as cross correlation would render this variable irrelevant.   
+```{r}
+## split Avg_Util into 3 groups: <= .001, <= .45, > .45
+raw.data$Avg_Util_below_.001 <- ifelse(raw.data$Avg_Util <= .001,1,0)
+raw.data$Avg_Util_above_.45 <- ifelse(raw.data$Avg_Util > .45,1,0)
+summary(raw.data[,c('Avg_Util_below_.001','Avg_Util_above_.45')])
+```
+## Create new variable: Avg_Pay_Ratio
+**data description Avg_Pay_Ratio**  amount paid against bill (BILL_AMTX+1/PAY_AMTX)
+```{r}
+## NOTE: PAY_AMT1 is lagging payment on BILL_AMT2 (only 5 measures) ##
+raw.data$Pay_Ratio_1 <- ifelse(raw.data$BILL_AMT2 > 0,
+                               (raw.data$PAY_AMT1 / raw.data$BILL_AMT2),1)
+raw.data$Pay_Ratio_2 <- ifelse(raw.data$BILL_AMT3 > 0,
+                               (raw.data$PAY_AMT2 / raw.data$BILL_AMT3),1)
+raw.data$Pay_Ratio_3 <- ifelse(raw.data$BILL_AMT4 > 0,
+                               (raw.data$PAY_AMT3 / raw.data$BILL_AMT4),1)
+raw.data$Pay_Ratio_4 <- ifelse(raw.data$BILL_AMT5 > 0,
+                               (raw.data$PAY_AMT4 / raw.data$BILL_AMT5),1)
+raw.data$Pay_Ratio_5 <- ifelse(raw.data$BILL_AMT6 > 0,
+                               (raw.data$PAY_AMT5 / raw.data$BILL_AMT6),1)
+
+raw.data$Ratio_SUM = rowSums(cbind(raw.data$Pay_Ratio_1,raw.data$Pay_Ratio_2,
+                             raw.data$Pay_Ratio_3,raw.data$Pay_Ratio_4,
+                             raw.data$Pay_Ratio_5))
+
+raw.data$Avg_Pay_Ratio <- raw.data$Ratio_SUM/5
+summary(raw.data$Avg_Pay_Ratio)
+```
+
+**Histogram - Avg_Pay_Ratio**
+```{r message=FALSE,warning=FALSE}
+# Getting ID and Avg_Util columns only
+Pay_Ratio_df <- raw.data[c('Avg_Pay_Ratio')]
+
+# Generating a histogram for the Avg_Pay_Ratio variable with a vertical cutoff line
+Avg_Pay_Ratio.hist.plot <-
+  ggplot(data = Pay_Ratio_df, 
+         aes(x = Pay_Ratio_df$Avg_Pay_Ratio)) +
+  geom_histogram(binwidth = .1,
+                 colour = "black", fill = "white") +
+  geom_vline(aes(xintercept = .03), 
+             colour = "#BB0000", linetype = "dashed") +
+  geom_vline(aes(xintercept = .68), 
+             colour = "#BB0000", linetype = "dashed") +
+  theme_minimal() +
+  xlim(-0.1,1.2) +
+  xlab("Avg_Pay_Ratio")
+
+# Printing both plots near each other
+MultiPlot(Avg_Pay_Ratio.hist.plot, cols = 1)
+```
+
+**bin analysis - Avg_Pay_Ratio** - investigate binning options for variable split
+```{r message=FALSE,warning=FALSE}
+# check WOE recommended binning and correlation in PAY_X
+Avg_Pay_Ratio_bins <- raw.data[,c("Avg_Pay_Ratio","DEFAULT")]
+Avg_Pay_Ratio_bin <- woe.binning(df=Avg_Pay_Ratio_bins,target.var=c("DEFAULT"),
+                             pred.var=c("Avg_Pay_Ratio"))
+
+Avg_Pay_Ratio_bin_table <- as.data.frame(woe.binning.table(Avg_Pay_Ratio_bin))
+
+Avg_Pay_Ratio_bin_table <- Avg_Pay_Ratio_bin_table[,-c(6:7,10)]
+colnames(Avg_Pay_Ratio_bin_table) <- c('Final.Bin','Total.Count','Distr',
+                       '0.Count','1.Count','Rate','WOE')
+Avg_Pay_Ratio_bin_table
+```
+**recommended transformation - Avg_Pay_Ratio** Create bins as per WOE max  
+Leave out > .113 & <= 1 as cross correlation would render this variable irrelevant.   
+```{r}
+## split Avg_Pay_Ratio into 3 groups: <= .035, <= .113, <= 1, > 1
+raw.data$Avg_Pay_Ratio_below_.035 <- ifelse(raw.data$Avg_Pay_Ratio <= .035,1,0)
+raw.data$Avg_Pay_Ratio_above_.113 <- ifelse(raw.data$Avg_Pay_Ratio > .035 &
+                                              raw.data$Avg_Pay_Ratio <= .113,1,0)
+raw.data$Avg_Pay_Ratio_above_1 <- ifelse(raw.data$Avg_Pay_Ratio > 1,1,0)
+summary(raw.data[,c('Avg_Pay_Ratio_below_.035',
+                    'Avg_Pay_Ratio_above_.113',
+                    'Avg_Pay_Ratio_above_1')])
+```
+
+## Create new variable: Max_DLQ
+**data description Max_DLQ**  max value in PAY_X variables across period
+```{r}
+## Create column Max_DLQ ##
+raw.data$Max_DLQa <- pmax(raw.data$PAY_1,raw.data$PAY_2,raw.data$PAY_3,
+                          raw.data$PAY_4,raw.data$PAY_5,raw.data$PAY_6)
+raw.data$Max_DLQ <- ifelse(raw.data$Max_DLQa <= 0,0,raw.data$Max_DLQa)
+summary(raw.data$Max_DLQ)
+```
+
+**bin analysis - Max_DLQ** - investigate binning options for variable split
+```{r message=FALSE,warning=FALSE}
+# check WOE recommended binning and correlation in PAY_X
+Max_DLQ_bins <- raw.data[,c("Max_DLQ","DEFAULT")]
+Max_DLQ_bin <- woe.binning(df=Max_DLQ_bins,target.var=c("DEFAULT"),
+                             pred.var=c("Max_DLQ"))
+
+Max_DLQ_bin_table <- as.data.frame(woe.binning.table(Max_DLQ_bin))
+
+Max_DLQ_bin_table <- Max_DLQ_bin_table[,-c(6:7,10)]
+colnames(Max_DLQ_bin_table) <- c('Final.Bin','Total.Count','Distr',
+                       '0.Count','1.Count','Rate','WOE')
+Max_DLQ_bin_table
+```
+**recommended transformation - Max_DLQ** Create bins as per WOE max  
+Leave out <= 1 as cross correlation would render this variable irrelevant.   
+```{r}
+## split Max_DLQ above 1
+raw.data$Max_DLQ_above1 <- ifelse(raw.data$Max_DLQ > 1,1,0)
+summary(raw.data$Max_DLQ_above1)
+```
+
+## Create new variables: Bal_Growth_6mo
+**data description Bal_Growth_6mo**  change in credit balance over period ()
+```{r message=FALSE,warning=FALSE}
+raw.data$Balance_Growth_6mo <- (raw.data$LIMIT_BAL-raw.data$BILL_AMT6)-
+                          (raw.data$LIMIT_BAL-raw.data$BILL_AMT1)
+summary(raw.data$Balance_Growth_6mo)
+```
+
+**bin analysis - Balance_Growth_6mo** - investigate binning options for variable split
+```{r message=FALSE,warning=FALSE}
+# check WOE recommended binning and correlation in PAY_X
+Bal_growth_bins <- raw.data[,c("Balance_Growth_6mo","DEFAULT")]
+Bal_growth_bin <- woe.binning(df=Bal_growth_bins,target.var=c("DEFAULT"),
+                             pred.var=c("Balance_Growth_6mo"))
+
+Bal_growth_bin_table <- as.data.frame(woe.binning.table(Bal_growth_bin))
+
+Bal_growth_bin_table <- Bal_growth_bin_table[,-c(6:7,10)]
+colnames(Bal_growth_bin_table) <- c('Final.Bin','Total.Count','Distr',
+                       '0.Count','1.Count','Rate','WOE')
+Bal_growth_bin_table
+```
+**recommended transformation - Balance_Growth_6mo** Create bins as per WOE max  
+Leave out > -10k & <= 1k as cross correlation would render this variable irrelevant.   
+```{r}
+## split Balance_Growth_6mo into 3 groups: <= -21k, <= -10k, <= 1k, > 1k
+raw.data$Balance_Growth_6mo_below_minus21k <- ifelse(
+                        raw.data$Balance_Growth_6mo <= -21800,1,0)
+raw.data$Balance_Growth_6mo_below_minus10k <- ifelse(
+                        raw.data$Balance_Growth_6mo > -21800 
+                        & raw.data$Balance_Growth_6mo <= -10000,1,0)
+raw.data$Balance_Growth_6mo_above_1k <- ifelse(
+                        raw.data$Balance_Growth_6mo >= 1000,1,0)
+summary(raw.data[,c('Balance_Growth_6mo_below_minus21k',
+                    'Balance_Growth_6mo_below_minus10k',
+                    'Balance_Growth_6mo_above_1k')])
+```
+
+## Create new variable: Util_Growth_6mo
+**data description Util_Growth_6mo**  change in utilization over 6 months
+```{r}
+## Create column Util_Growth_6mo ##
+raw.data$Util_Growth_6mo <- raw.data$Util_Bill_1 - raw.data$Util_Bill_6
+summary(raw.data$Util_Growth_6mo)
+```
+
+**bin analysis - Util_Growth_6mo** - investigate binning options for variable split
+```{r message=FALSE,warning=FALSE}
+# check WOE recommended binning and correlation in PAY_X
+U_Growth_bins <- raw.data[,c("Util_Growth_6mo","DEFAULT")]
+U_Growth_bin <- woe.binning(df=U_Growth_bins,target.var=c("DEFAULT"),
+                             pred.var=c("Util_Growth_6mo"))
+
+U_Growth_bin_table <- as.data.frame(woe.binning.table(U_Growth_bin))
+
+U_Growth_bin_table <- U_Growth_bin_table[,-c(6:7,10)]
+colnames(U_Growth_bin_table) <- c('Final.Bin','Total.Count','Distr',
+                       '0.Count','1.Count','Rate','WOE')
+U_Growth_bin_table
+```
+**recommended transformation - Avg_Pay_Ratio** Create bins as per WOE max  
+Leave out > .113 & <= 1 as cross correlation would render this variable irrelevant.   
+```{r}
+## split Util_Growth_6mo into 4 groups: <= -.03 <= -.003, <= 0, > 0
+raw.data$Util_Growth_6mo_below_minus.03 <- ifelse(
+                            raw.data$Util_Growth_6mo <= -.03,1,0)
+raw.data$Util_Growth_6mo_below_minus.003 <- ifelse(
+                            raw.data$Util_Growth_6mo > -.03 &
+                            raw.data$Util_Growth_6mo <= -.003,1,0)
+raw.data$Util_Growth_6mo_above_0 <- ifelse(
+                            raw.data$Util_Growth_6mo > 0,1,0)
+summary(raw.data[,c('Util_Growth_6mo_below_minus.03',
+                    'Util_Growth_6mo_below_minus.003',
+                    'Util_Growth_6mo_above_0')])
+```
