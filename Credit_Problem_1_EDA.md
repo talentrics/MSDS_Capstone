@@ -279,25 +279,6 @@ MultiPlot(plotlist = dem.histograms, cols = 3)
 ```
 
 ![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
-**Categorical frequency - EDUCATION**
-
-``` r
-ed_summary <-raw.data[,c(4)]
-ed_table <- as.data.frame(table(ed_summary))
-colnames(ed_table) <- c('EDUCATION','Freq')
-ed_table$PCT <- ed_table$Freq/30000
-ed_table$PCT <- paste(round(ed_table$PCT*100,digits=1),"%",sep="")
-ed_table
-```
-
-    ##   EDUCATION  Freq   PCT
-    ## 1         0    14    0%
-    ## 2         1 10585 35.3%
-    ## 3         2 14030 46.8%
-    ## 4         3  4917 16.4%
-    ## 5         4   123  0.4%
-    ## 6         5   280  0.9%
-    ## 7         6    51  0.2%
 
 **observations & recommendations for transformation:**
 
@@ -318,6 +299,26 @@ summary(raw.data$Married_Y)
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##  0.0000  0.0000  0.0000  0.4553  1.0000  1.0000
+
+**Categorical frequency - EDUCATION**
+
+``` r
+ed_summary <-raw.data[,c(4)]
+ed_table <- as.data.frame(table(ed_summary))
+colnames(ed_table) <- c('EDUCATION','Freq')
+ed_table$PCT <- ed_table$Freq/30000
+ed_table$PCT <- paste(round(ed_table$PCT*100,digits=1),"%",sep="")
+ed_table
+```
+
+    ##   EDUCATION  Freq   PCT
+    ## 1         0    14    0%
+    ## 2         1 10585 35.3%
+    ## 3         2 14030 46.8%
+    ## 4         3  4917 16.4%
+    ## 5         4   123  0.4%
+    ## 6         5   280  0.9%
+    ## 7         6    51  0.2%
 
 **EDUCATION** un-defined values (0), (5), & (6) ~1.1% - change all
 ‘other’ to category (0)
