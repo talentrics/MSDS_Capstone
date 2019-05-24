@@ -236,8 +236,11 @@ summary((raw.data[,c('LIMIT_BAL_below_30k','LIMIT_BAL_above_160k')]))
     ##  Max.   :1.000       Max.   :1.0000
 
 **Binning for regression analysis - in case of tree analysis, continuous
-variable recommended.**  
-\#\# Explore & Transform - Demographics: **data descriptions:**  
+variable recommended.**
+
+## Explore & Transform - Demographics:
+
+**data descriptions:**  
 **SEX** Categorical: (1) = Male; (2) = Female  
 **EDUCATION** Categorical: (1) = graduate school; (2) = university; (3)
 = high school; (4) = others  
@@ -756,6 +759,10 @@ raw.data$Avg_Bill_Amt <- raw.data$BILL_SUM/6
 raw.data$Max_Bill_Amt <- pmax(raw.data$BILL_AMT1,raw.data$BILL_AMT2,
                               raw.data$BILL_AMT3,raw.data$BILL_AMT4,
                               raw.data$BILL_AMT5,raw.data$BILL_AMT6)
+
+raw.data$Max_Bill_Amt_Sq <- raw.data$Max_Bill_Amt^2
+raw.data$Max_Bill_Amt_Sqrt <- sqrt(raw.data$Max_Bill_Amt)
+raw.data$Max_Bill_Amt_Log <- log(raw.data$Max_Bill_Amt)
 ```
 
 **BILL\_X - analyze most highly correlated variable type**
@@ -763,17 +770,19 @@ raw.data$Max_Bill_Amt <- pmax(raw.data$BILL_AMT1,raw.data$BILL_AMT2,
 ``` r
 # check correlation of BILL_X Sum Variable
 BILL_X.correlation <- cor(raw.data[,c('BILL_SUM','Avg_Bill_Amt',
-                                      'Max_Bill_Amt','DEFAULT')])
+                                      'Max_Bill_Amt','Max_Bill_Amt_Sq',
+                                      'DEFAULT')])
 BILL_X.correlation <- as.data.frame(BILL_X.correlation)
-BILL_X.correlation <- BILL_X.correlation[4]
+BILL_X.correlation <- BILL_X.correlation[5]
 BILL_X.correlation
 ```
 
-    ##                  DEFAULT
-    ## BILL_SUM     -0.01269136
-    ## Avg_Bill_Amt -0.01269136
-    ## Max_Bill_Amt -0.04091327
-    ## DEFAULT       1.00000000
+    ##                     DEFAULT
+    ## BILL_SUM        -0.01269136
+    ## Avg_Bill_Amt    -0.01269136
+    ## Max_Bill_Amt    -0.04091327
+    ## Max_Bill_Amt_Sq -0.01613578
+    ## DEFAULT          1.00000000
 
 **Histogram - Max\_Bill\_Amt**
 

@@ -155,6 +155,7 @@ raw.data$LIMIT_BAL_above_160k <- ifelse(raw.data$LIMIT_BAL > 160000,1,0)
 summary((raw.data[,c('LIMIT_BAL_below_30k','LIMIT_BAL_above_160k')]))
 ```
 **Binning for regression analysis - in case of tree analysis, continuous variable recommended.**   
+   
 ## Explore & Transform - Demographics: 
 **data descriptions:**   
 **SEX** Categorical: (1) = Male; (2) = Female   
@@ -481,14 +482,20 @@ raw.data$Avg_Bill_Amt <- raw.data$BILL_SUM/6
 raw.data$Max_Bill_Amt <- pmax(raw.data$BILL_AMT1,raw.data$BILL_AMT2,
                               raw.data$BILL_AMT3,raw.data$BILL_AMT4,
                               raw.data$BILL_AMT5,raw.data$BILL_AMT6)
+
+raw.data$Max_Bill_Amt_Sq <- raw.data$Max_Bill_Amt^2
+raw.data$Max_Bill_Amt_Sqrt <- sqrt(raw.data$Max_Bill_Amt)
+raw.data$Max_Bill_Amt_Log <- log(raw.data$Max_Bill_Amt)
+
 ```
 **BILL_X - analyze most highly correlated variable type**
 ```{r}
 # check correlation of BILL_X Sum Variable
 BILL_X.correlation <- cor(raw.data[,c('BILL_SUM','Avg_Bill_Amt',
-                                      'Max_Bill_Amt','DEFAULT')])
+                                      'Max_Bill_Amt','Max_Bill_Amt_Sq',
+                                      'DEFAULT')])
 BILL_X.correlation <- as.data.frame(BILL_X.correlation)
-BILL_X.correlation <- BILL_X.correlation[4]
+BILL_X.correlation <- BILL_X.correlation[5]
 BILL_X.correlation
 ```
    
