@@ -669,10 +669,10 @@ raw.data$Max_Pmt_Amt <- pmax(raw.data$PAY_AMT1,raw.data$PAY_AMT2,
 **PAY_AMTX - analyze most highly correlated variable type**
 ```{r}
 # check correlation of BILL_X Sum Variable
-PAY_AMTX.correlation <- cor(raw.data[,c('PMT_SUM','Avg_Pmt_Amt',
-                                      'Max_Pmt_Amt','DEFAULT')])
+PAY_AMTX.correlation <- cor(raw.data[,c('PMT_SUM','Avg_Pmt_Amt','Max_Pmt_Amt',
+                                        'Avg_Pay_Ratio','DEFAULT')])
 PAY_AMTX.correlation <- as.data.frame(PAY_AMTX.correlation)
-PAY_AMTX.correlation <- PAY_AMTX.correlation[4]
+PAY_AMTX.correlation <- PAY_AMTX.correlation[5]
 PAY_AMTX.correlation
 ```
    
@@ -743,7 +743,7 @@ Avg_Util_df <- raw.data[c('Avg_Util')]
 Avg_Util.hist.plot <-
   ggplot(data = Avg_Util_df, 
          aes(x = Avg_Util_df$Avg_Util)) +
-  geom_histogram(binwidth = .1,
+  geom_histogram(binwidth = .05,
                  colour = "black", fill = "white") +
   geom_vline(aes(xintercept = .03), 
              colour = "#BB0000", linetype = "dashed") +
@@ -811,7 +811,7 @@ Pay_Ratio_df <- raw.data[c('Avg_Pay_Ratio')]
 Avg_Pay_Ratio.hist.plot <-
   ggplot(data = Pay_Ratio_df, 
          aes(x = Pay_Ratio_df$Avg_Pay_Ratio)) +
-  geom_histogram(binwidth = .1,
+  geom_histogram(binwidth = .05,
                  colour = "black", fill = "white") +
   geom_vline(aes(xintercept = .03), 
              colour = "#BB0000", linetype = "dashed") +
@@ -862,6 +862,15 @@ raw.data$Max_DLQ <- ifelse(raw.data$Max_DLQa <= 0,0,raw.data$Max_DLQa)
 summary(raw.data$Max_DLQ)
 ```
 
+```{r}
+DLQ_summary <-raw.data[,c('Max_DLQ')]
+DLQ_table <- as.data.frame(table(DLQ_summary))
+colnames(DLQ_table) <- c('Max_DLQ','Freq')
+DLQ_table$PCT <- DLQ_table$Freq/30000
+DLQ_table$PCT <- paste(round(DLQ_table$PCT*100,digits=1),"%",sep="")
+DLQ_table
+```
+
 **Max_DLQ - bin analysis** - investigate binning options for variable split
 ```{r message=FALSE,warning=FALSE}
 # check WOE recommended binning and correlation in PAY_X
@@ -891,6 +900,29 @@ raw.data$Balance_Growth_6mo <- (raw.data$LIMIT_BAL-raw.data$BILL_AMT6)-
                           (raw.data$LIMIT_BAL-raw.data$BILL_AMT1)
 summary(raw.data$Balance_Growth_6mo)
 ```
+
+```{r `message=FALSE,warning=FALSE}
+# Getting ID and Balance_Growth_6mo columns only
+Bal_Growth_df <- raw.data[c('Balance_Growth_6mo')]
+
+# Generating a histogram for the Avg_Pay_Ratio variable with a vertical cutoff line
+Bal_growth.hist.plot <-
+  ggplot(data = Bal_Growth_df, 
+         aes(x = Bal_Growth_df$Balance_Growth_6mo)) +
+  geom_histogram(binwidth = 1000,
+                 colour = "black", fill = "white") +
+  geom_vline(aes(xintercept = -2963), 
+             colour = "#BB0000", linetype = "dashed") +
+  geom_vline(aes(xintercept = 19794), 
+             colour = "#BB0000", linetype = "dashed") +
+  theme_minimal() +
+  xlim(-3000,20000) +
+  xlab("Balance_Growth_6mo")
+
+# Printing both plots near each other
+MultiPlot(Bal_growth.hist.plot, cols = 1)
+```
+
 
 **Bal_Growth_6mo - bin analysis** - investigate binning options for variable split
 ```{r message=FALSE,warning=FALSE}
@@ -929,6 +961,29 @@ summary(raw.data[,c('Balance_Growth_6mo_below_minus21k',
 raw.data$Util_Growth_6mo <- raw.data$Util_Bill_1 - raw.data$Util_Bill_6
 summary(raw.data$Util_Growth_6mo)
 ```
+
+```{r message=FALSE,warning=FALSE}
+# Getting ID and Balance_Growth_6mo columns only
+Util_Growth_df <- raw.data[c('Util_Growth_6mo')]
+
+# Generating a histogram for the Avg_Pay_Ratio variable with a vertical cutoff line
+Util_growth.hist.plot <-
+  ggplot(data = Util_Growth_df, 
+         aes(x = Util_Growth_df$Util_Growth_6mo)) +
+  geom_histogram(binwidth = .02,
+                 colour = "black", fill = "white") +
+  geom_vline(aes(xintercept = -.029), 
+             colour = "#BB0000", linetype = "dashed") +
+  geom_vline(aes(xintercept = .18), 
+             colour = "#BB0000", linetype = "dashed") +
+  theme_minimal() +
+  xlim(-.3,.4) +
+  xlab("Util_Growth_6mo")
+
+# Printing both plots near each other
+MultiPlot(Util_growth.hist.plot, cols = 1)
+```
+
 
 **Util_Growth_6mo - bin analysis** - investigate binning options for variable split
 ```{r message=FALSE,warning=FALSE}

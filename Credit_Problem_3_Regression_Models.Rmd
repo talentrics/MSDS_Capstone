@@ -18,29 +18,468 @@ These notebooks support analysis published in the [Summary: Model Development Gu
     * [Regression and Principal Components Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_3_Regression_Models.md){target="_blank"} **(This Notebook)**    
     * [Summary: Model Development Guide (PDF)](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_4_Model_Development_Guide.pdf){target="_blank"}   
 
-### Part 1 Data Overview
+## Part 1 Data Overview
 
+Data installed from RData file saved on local computer.  The original file can be foud in [github repository/data.](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/data/credit_card_default.RData){target="_blank"}  Data Exploration and transformation is outlined in part 1 of this project - [posted here.](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md){target="_blank"}
+```{r setup, message=FALSE,warning=FALSE}
+# Read the RData object using readRDS();
+credit_card_default <- readRDS('/Users/talentrics/credit_card_default.RData')
+#rename data set
+raw.data <- credit_card_default
+#update column name for 'PAY_0' to 'PAY_1'
+colnames(raw.data)[which(colnames
+    (raw.data) == 'PAY_0')] <- 'PAY_1'
+```
+### Data Transformation
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r}
+#transform LIMIT_BAL as per optimal binning in Exploratory Data Analysis (EDA)
+raw.data$LIMIT_BAL_below_30k <- ifelse(raw.data$LIMIT_BAL <= 30000,1,0)
+raw.data$LIMIT_BAL_above_160k <- ifelse(raw.data$LIMIT_BAL > 160000,1,0)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+*variable transformation of demographic data**
+```{r message=FALSE,warning=FALSE}
+#transform SEX variable to SEX_FEMALE (1=true)
+raw.data$SEX_FEMALE <- ifelse(raw.data$SEX == 2,1,0)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+#transform MARRIED variable to Married_Y (1=true)
+raw.data$Married_Y <- ifelse(raw.data$MARRIAGE == 1,1,0)
 
-```{r cars}
-summary(cars)
+#transform EDUCATION variable so all above 3 are (0 = Other)
+raw.data$EDUCATION[raw.data$EDUCATION > 3] <- 0
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+**ED_Grad_Other**
+```{r}
+#transform EDUCATION as per optimal binning in Exploratory Data Analysis (EDA)
+raw.data$ED_Grad_other <- ifelse((raw.data$EDUCATION < 1) | 
+                             (raw.data$EDUCATION > 3) |(raw.data$EDUCATION == 1),1,0)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+**AGE Bins**
+```{r}
+#transform AGE as per optimal binning in Exploratory Data Analysis (EDA)
+raw.data$AGE_below_25 <- ifelse(raw.data$AGE <= 25,1,0)
+raw.data$AGE_25to35 <- ifelse((raw.data$AGE > 25) &
+                                (raw.data$AGE <=35),1,0)
+raw.data$AGE_above_40 <- ifelse(raw.data$AGE > 40,1,0)
+```
+
+**PAY_X_Sum_6mo Bins**
+```{r message=FALSE,warning=FALSE}
+#create sum variable of PAY_1 : PAY_6 variables
+raw.data$PAY_X_Sum_6mo <- rowSums(cbind(raw.data$PAY_1,raw.data$PAY_2,
+                                  raw.data$PAY_3,raw.data$PAY_4,
+                                  raw.data$PAY_5,raw.data$PAY_6))
+
+# bin the PAY_X_Sum_6mo as per optimal binning in Exploratory Data Analysis (EDA)
+raw.data$PAY_X_Sum_6mo_belowZero <- ifelse(raw.data$PAY_X_Sum_6mo <= 0,1,0)
+raw.data$PAY_X_Sum_6mo_aboveFive <- ifelse(raw.data$PAY_X_Sum_6mo > 5,1,0)
+```
+
+**Max_Bill_Amt Bins**
+```{r}
+#create variable of max value of BILL_AMT1 : BILL_AMT6
+raw.data$Max_Bill_Amt <- pmax(raw.data$BILL_AMT1,raw.data$BILL_AMT2,
+                              raw.data$BILL_AMT3,raw.data$BILL_AMT4,
+                              raw.data$BILL_AMT5,raw.data$BILL_AMT6)
+
+# bin Max_Bill_Amt as per optimal binning in Exploratory Data Analysis (EDA)
+raw.data$Max_Bill_Amt_below_600 <- ifelse(raw.data$Max_Bill_Amt <= 600,1,0)
+raw.data$Max_Bill_Amt_below_4k <- ifelse(raw.data$Max_Bill_Amt > 600 &
+                                           raw.data$Max_Bill_Amt <= 4000,1,0)
+raw.data$Max_Bill_Amt_below_18k <- ifelse(raw.data$Max_Bill_Amt > 4000 &
+                                            raw.data$Max_Bill_Amt <=18400,1,0)
+raw.data$Max_Bill_Amt_below_21k <- ifelse(raw.data$Max_Bill_Amt > 18400 &
+                                            raw.data$Max_Bill_Amt <=21000,1,0)
+raw.data$Max_Bill_Amt_above_52k <- ifelse(raw.data$Max_Bill_Amt > 52000,1,0)
+
+```
+
+**Avg_Pmt_Amt Bins**
+```{r}
+#create variable of sum value of PAY_AMT1 : PAY_AMT6
+raw.data$PMT_SUM <- rowSums(cbind(raw.data$PAY_AMT1,raw.data$PAY_AMT2,
+                                  raw.data$PAY_AMT3,raw.data$PAY_AMT4,
+                                  raw.data$PAY_AMT5,raw.data$PAY_AMT6))
+
+#create variable of average of PAY_AMT1 : PAY_AMT6
+raw.data$Avg_Pmt_Amt <- raw.data$PMT_SUM/6
+
+# bin Avg_Pmt_Amt as per optimal binning in Exploratory Data Analysis (EDA)
+raw.data$Avg_Pmt_Amt_below2k <- ifelse(raw.data$Avg_Pmt_Amt <= 2045,1,0)
+raw.data$Avg_Pmt_Amt_above12k <- ifelse(raw.data$Avg_Pmt_Amt > 12000,1,0)
+```
+
+**AVG_Util - variable creation (Utilization = BILL_AMT/LIMIT_BAL)**
+```{r message=FALSE,warning=FALSE}
+#find utilization rate of each billing cycle (Utilization = BILL_AMT/LIMIT_BAL)
+raw.data$Util_Bill_1 <- raw.data$BILL_AMT1 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_2 <- raw.data$BILL_AMT2 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_3 <- raw.data$BILL_AMT3 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_4 <- raw.data$BILL_AMT4 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_5 <- raw.data$BILL_AMT5 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_6 <- raw.data$BILL_AMT6 / raw.data$LIMIT_BAL
+
+#create variable of sum values of utilization rates Util_Bill_1 : Util_Bill_6
+raw.data$Util_SUM = rowSums(cbind(raw.data$Util_Bill_1,raw.data$Util_Bill_2,
+                            raw.data$Util_Bill_3,raw.data$Util_Bill_4,
+                            raw.data$Util_Bill_5,raw.data$Util_Bill_6))
+
+#take the average Utilization rate from Util_Bill_1 : Util_Bill_6
+raw.data$Avg_Util <- raw.data$Util_SUM/6
+
+## split Avg_Util as per optimal binning in Exploratory Data Analysis (EDA)
+raw.data$Avg_Util_below_.001 <- ifelse(raw.data$Avg_Util <= .001,1,0)
+raw.data$Avg_Util_above_.45 <- ifelse(raw.data$Avg_Util > .45,1,0)
+```
+
+**Avg_Pay_Ratio - variable creation (Pay_Ratio = BILL_AMTX/PAY_AMTX-1)**
+```{r message=FALSE,warning=FALSE}
+## NOTE: PAY_AMT1 is lagging payment on BILL_AMT2 (only 5 measures) ##
+raw.data$Pay_Ratio_1 <- ifelse(raw.data$BILL_AMT2 > 0,
+                               (raw.data$PAY_AMT1 / raw.data$BILL_AMT2),1)
+raw.data$Pay_Ratio_2 <- ifelse(raw.data$BILL_AMT3 > 0,
+                               (raw.data$PAY_AMT2 / raw.data$BILL_AMT3),1)
+raw.data$Pay_Ratio_3 <- ifelse(raw.data$BILL_AMT4 > 0,
+                               (raw.data$PAY_AMT3 / raw.data$BILL_AMT4),1)
+raw.data$Pay_Ratio_4 <- ifelse(raw.data$BILL_AMT5 > 0,
+                               (raw.data$PAY_AMT4 / raw.data$BILL_AMT5),1)
+raw.data$Pay_Ratio_5 <- ifelse(raw.data$BILL_AMT6 > 0,
+                               (raw.data$PAY_AMT5 / raw.data$BILL_AMT6),1)
+
+raw.data$Ratio_SUM = rowSums(cbind(raw.data$Pay_Ratio_1,raw.data$Pay_Ratio_2,
+                             raw.data$Pay_Ratio_3,raw.data$Pay_Ratio_4,
+                             raw.data$Pay_Ratio_5))
+
+raw.data$Avg_Pay_Ratio <- raw.data$Ratio_SUM/5
+
+## split Avg_Pay_Ratio as per optimal binning in Exploratory Data Analysis (EDA)
+raw.data$Avg_Pay_Ratio_below_.035 <- ifelse(raw.data$Avg_Pay_Ratio <= .035,1,0)
+raw.data$Avg_Pay_Ratio_above_.113 <- ifelse(raw.data$Avg_Pay_Ratio > .035 &
+                                              raw.data$Avg_Pay_Ratio <= .113,1,0)
+raw.data$Avg_Pay_Ratio_above_1 <- ifelse(raw.data$Avg_Pay_Ratio > 1,1,0)
+```
+
+**Max_DLQ - variable creation (max value of PAY_1 : PAY_6)**
+```{r message=FALSE,warning=FALSE}
+#find max value of variables PAY_1 : PAY_6
+raw.data$Max_DLQa <- pmax(raw.data$PAY_1,raw.data$PAY_2,raw.data$PAY_3,
+                          raw.data$PAY_4,raw.data$PAY_5,raw.data$PAY_6)
+
+#if Max_DLQa is below zero, set to zero, else max value of Max_DLQa
+raw.data$Max_DLQ <- ifelse(raw.data$Max_DLQa <= 0,0,raw.data$Max_DLQa)
+
+## split Max_DLQ as per optimal binning in Exploratory Data Analysis (EDA)
+raw.data$Max_DLQ_above1 <- ifelse(raw.data$Max_DLQ > 1,1,0)
+```
+
+**Balance_Growth_6mo - variable creation (∆ in difference from LIMIT_BAL to BILL_AMT over time)**
+```{r message=FALSE,warning=FALSE}
+raw.data$Balance_Growth_6mo <- (raw.data$LIMIT_BAL-raw.data$BILL_AMT6)-
+                          (raw.data$LIMIT_BAL-raw.data$BILL_AMT1)
+
+## split Balance_Growth_6mo as per optimal binning in Exploratory Data Analysis (EDA)
+raw.data$Balance_Growth_6mo_below_minus21k <- ifelse(
+                        raw.data$Balance_Growth_6mo <= -21800,1,0)
+raw.data$Balance_Growth_6mo_below_minus10k <- ifelse(
+                        raw.data$Balance_Growth_6mo > -21800 
+                        & raw.data$Balance_Growth_6mo <= -10000,1,0)
+raw.data$Balance_Growth_6mo_above_1k <- ifelse(
+                        raw.data$Balance_Growth_6mo >= 1000,1,0)
+```
+
+**Util_Growth_6mo - variable creation (∆ in utilization Util_Bill_1 - Util_Bill_6)**
+```{r message=FALSE,warning=FALSE}
+raw.data$Util_Growth_6mo <- raw.data$Util_Bill_1 - raw.data$Util_Bill_6
+
+# split Util_Growth_6mo as per optimal binning in Exploratory Data Analysis (EDA)
+raw.data$Util_Growth_6mo_below_minus.03 <- ifelse(
+                            raw.data$Util_Growth_6mo <= -.03,1,0)
+raw.data$Util_Growth_6mo_below_minus.003 <- ifelse(
+                            raw.data$Util_Growth_6mo > -.03 &
+                            raw.data$Util_Growth_6mo <= -.003,1,0)
+raw.data$Util_Growth_6mo_above_0 <- ifelse(
+                            raw.data$Util_Growth_6mo > 0,1,0)
+```
+
+```{r}
+raw.data$target <- as.factor(raw.data$DEFAULT)
+```
+
+
+```{r}
+sub_list_GLM <- c("LIMIT_BAL_below_30k","LIMIT_BAL_above_160k","SEX_FEMALE","ED_Grad_other",
+              "Married_Y","AGE_below_25","AGE_25to35","AGE_above_40",
+              "PAY_X_Sum_6mo_belowZero","PAY_X_Sum_6mo_aboveFive",
+              "Max_Bill_Amt_below_600","Max_Bill_Amt_below_4k","Max_Bill_Amt_below_18k",
+              "Max_Bill_Amt_below_21k","Max_Bill_Amt_above_52k",
+              "Avg_Pmt_Amt_below2k","Avg_Pmt_Amt_above12k",
+              "Avg_Util_below_.001","Avg_Util_above_.45",
+              "Avg_Pay_Ratio_below_.035","Avg_Pay_Ratio_above_.113","Avg_Pay_Ratio_above_1",
+              "Max_DLQ_above1","Balance_Growth_6mo_below_minus21k","Balance_Growth_6mo_below_minus10k",
+              "Balance_Growth_6mo_above_1k","Util_Growth_6mo_below_minus.03",
+              "Util_Growth_6mo_below_minus.003","Util_Growth_6mo_above_0","DEFAULT")
+
+xtrain_GLM <- subset(raw.data, select = sub_list_GLM, data.group == 1)
+xtest_GLM <- subset(raw.data, select = sub_list_GLM, data.group == 2)
+validate_GLM <- subset(raw.data, select = sub_list_GLM, data.group == 3)
+
+str(xtrain_GLM)
+```
+##Variable selection
+```{r}
+library(MASS)
+full_glm <- glm(DEFAULT ~.,data=xtrain_GLM)
+summary(full_glm)
+```
+
+```{r}
+backward_glm <- stepAIC(full_glm,direction="backward",trace=FALSE)
+backward_glm$anova
+```
+
+```{r}
+sub_list_GLM2 <- c("LIMIT_BAL_below_30k","LIMIT_BAL_above_160k","SEX_FEMALE",
+              "Married_Y","AGE_25to35","PAY_X_Sum_6mo_belowZero","PAY_X_Sum_6mo_aboveFive",
+              "Max_Bill_Amt_below_600","Max_Bill_Amt_below_4k","Max_Bill_Amt_below_18k",
+              "Max_Bill_Amt_above_52k","Avg_Pmt_Amt_below2k","Avg_Pmt_Amt_above12k",
+              "Avg_Util_below_.001","Avg_Util_above_.45","Avg_Pay_Ratio_above_.113","Avg_Pay_Ratio_above_1",
+              "Max_DLQ_above1","Balance_Growth_6mo_below_minus21k","Util_Growth_6mo_below_minus.03",
+              "Util_Growth_6mo_above_0","target")
+
+xtrain_GLM2 <- subset(raw.data, select = sub_list_GLM2, data.group == 1)
+xtest_GLM2 <- subset(raw.data, select = sub_list_GLM2, data.group == 2)
+validate_GLM2 <- subset(raw.data, select = sub_list_GLM2, data.group == 3)
+
+str(xtrain_GLM2)
+```
+
+```{r message=FALSE,warning=FALSE}
+#install.packages("randomForest")
+library(caret)
+#install.packages("tidyverse")
+library(tidyverse)
+library(pROC)
+```
+**General Linear Model**
+```{r}
+control <- trainControl(method="repeatedcv", number=10, repeats=2, search="random")
+seed <- 7
+set.seed(seed)
+fit.GLM2 <- train(target ~ .,data = xtrain_GLM2,family="binomial",method = "glm",trControl=control)
+```
+
+
+```{r}
+# Predicting probability of survival using predict type 'prob'
+predGLM2_prob <- predict(fit.GLM2, newdata = xtrain_GLM2, type = "prob")
+
+#create column with likelihood factor
+xtrain_GLM2$predGLM2_prob <- abs(as.numeric(predGLM2_prob$'1'))
+summary(xtrain_GLM2$predGLM2_prob)
+#create binary classifier based on threshold values
+xtrain_GLM2$classes <- ifelse(xtrain_GLM2$predGLM2_prob >.25,1,0)
+
+# Checking classification accuracy
+GLM2_train = table(xtrain_GLM2$target,xtrain_GLM2$classes) 
+GLM2_train
+
+# Checking classification accuracy
+t_GLM2_train = table(xtrain_GLM2$target,xtrain_GLM2$classes) 
+t_GLM2_train
+
+accuracy.GLM2_train <- (t_GLM2_train[1,1]+t_GLM2_train[2,2])/(t_GLM2_train[1,1]+
+                          t_GLM2_train[1,2]+t_GLM2_train[2,1]+t_GLM2_train[2,2])
+
+# Compute row totals;
+r_GLM2_train <- apply(t_GLM2_train,MARGIN=1,FUN=sum);
+# Normalize confusion matrix to rates;
+matrix_GLM2_train <- t_GLM2_train/r_GLM2_train
+matrix_GLM2_train
+
+cat('GLM2_train accuracy:',accuracy.GLM2_train)
+```
+
+```{r}
+GLM2.roc2_train <-roc(xtrain_GLM2$target,xtrain_GLM2$classes)
+plot(GLM2.roc2_train)
+auc(GLM2.roc2_train)
+```
+
+
+```{r}
+# Predicting probability of survival using predict type 'prob'
+predGLM2_test <- predict(fit.GLM2, newdata = xtest_GLM2, type = "prob")
+
+#create column with likelihood factor
+xtest_GLM2$predGLM2_test <- abs(as.numeric(predGLM2_test$'1'))
+summary(xtest_GLM2$predGLM2_test)
+#create binary classifier based on threshold values
+xtest_GLM2$classes <- ifelse(xtest_GLM2$predGLM2_test >.25,1,0)
+
+# Checking classification accuracy
+GLM2_test = table(xtest_GLM2$target,xtest_GLM2$classes) 
+GLM2_test
+
+# Checking classification accuracy
+t_GLM2_test = table(xtest_GLM2$target,xtest_GLM2$classes) 
+t_GLM2_test
+
+accuracy.GLM2_test <- (t_GLM2_test[1,1]+t_GLM2_test[2,2])/(t_GLM2_test[1,1]+
+                          t_GLM2_test[1,2]+t_GLM2_test[2,1]+t_GLM2_test[2,2])
+
+# Compute row totals;
+r_GLM2_test <- apply(t_GLM2_test,MARGIN=1,FUN=sum);
+# Normalize confusion matrix to rates;
+matrix_GLM2_test <- t_GLM2_test/r_GLM2_test
+matrix_GLM2_test
+
+cat('GLM2_test accuracy:',accuracy.GLM2_test)
+```
+
+```{r}
+GLM2.roc2_test <-roc(xtest_GLM2$target,xtest_GLM2$classes)
+plot(GLM2.roc2_test)
+auc(GLM2.roc2_test)
+```
+
+```{r}
+importance_GLM2 <- as.matrix(varImp(fit.GLM2)$importance)
+importance_t <- as.data.frame(importance_GLM2)
+importance_t$Variables <- row.names(importance_t)
+importance_t <- importance_t[,c("Variables","Overall")]
+importance_t <- importance_t[order(-importance_t$Overall),]
+row.names(importance_t) <- NULL
+importance_t
+```
+
+```{r}
+library(ggplot2)
+ggplot(importance_t, aes(x=reorder(Variables, Overall), y=Overall)) + 
+  geom_point() +
+  geom_segment(aes(x=Variables,xend=Variables,y=0,yend=Overall)) +
+  #scale_color_discrete(name="Variable Group") +
+  ylab("Overall Measure (Variable was primary split)") +
+  xlab("Variable Name") +
+  coord_flip()
+```
+**create data set for Model 4 - PCANNet - remove cross correlated as per EDA**
+```{r}
+sub_list_PCA <- c("LIMIT_BAL_below_30k","LIMIT_BAL_above_160k","SEX_FEMALE",
+              "Married_Y","AGE_25to35","PAY_X_Sum_6mo_belowZero","PAY_X_Sum_6mo_aboveFive",
+              "Max_Bill_Amt_below_600","Max_Bill_Amt_below_4k","Max_Bill_Amt_below_18k",
+              "Max_Bill_Amt_above_52k","Avg_Pmt_Amt_below2k","Avg_Pmt_Amt_above12k",
+              "Max_DLQ_above1","Balance_Growth_6mo_below_minus21k","target")
+
+xtrain_PCA <- subset(raw.data, select = sub_list_PCA, data.group == 1)
+xtest_PCA <- subset(raw.data, select = sub_list_PCA, data.group == 2)
+validate_PCA <- subset(raw.data, select = sub_list_PCA, data.group == 3)
+
+str(xtrain_PCA)
+```
+
+```{r}
+control <- trainControl(method="repeatedcv", number=10, repeats=2, search="random")
+seed <- 7
+set.seed(seed)
+fit.PCA <- train(target ~ .,data = xtrain_PCA,family="binomial",method = "pcaNNet",
+                  trControl=control,verbose=FALSE)
+```
+
+```{r}
+# Predicting probability of survival using predict type 'prob'
+predPCA_train <- predict(fit.PCA, newdata = xtrain_PCA, type = "prob")
+
+#create column with likelihood factor
+xtrain_PCA$predPCA_train <- abs(as.numeric(predPCA_train$'1'))
+summary(xtrain_PCA$predPCA_train)
+#create binary classifier based on threshold values
+xtrain_PCA$classes <- ifelse(xtrain_PCA$predPCA_train >.25,1,0)
+
+# Checking classification accuracy
+PCA_train = table(xtrain_PCA$target,xtrain_PCA$classes) 
+PCA_train
+
+# Checking classification accuracy
+t_PCA_train = table(xtrain_PCA$target,xtrain_PCA$classes) 
+t_PCA_train
+
+accuracy.PCA_train <- (t_PCA_train[1,1]+t_PCA_train[2,2])/(t_PCA_train[1,1]+
+                          t_PCA_train[1,2]+t_PCA_train[2,1]+t_PCA_train[2,2])
+
+# Compute row totals;
+r_PCA_train <- apply(t_PCA_train,MARGIN=1,FUN=sum);
+# Normalize confusion matrix to rates;
+matrix_PCA_train <- t_PCA_train/r_PCA_train
+matrix_PCA_train
+
+cat('PCA_train accuracy:',accuracy.PCA_train)
+```
+
+```{r}
+PCA.roc2_train <-roc(xtrain_PCA$target,xtrain_PCA$classes)
+plot(PCA.roc2_train)
+auc(PCA.roc2_train)
+```
+
+
+```{r}
+# Predicting probability of survival using predict type 'prob'
+predPCA_test <- predict(fit.PCA, newdata = xtest_PCA, type = "prob")
+
+#create column with likelihood factor
+xtest_PCA$predPCA_test <- abs(as.numeric(predPCA_test$'1'))
+summary(xtest_PCA$predPCA_test)
+#create binary classifier based on threshold values
+xtest_PCA$classes <- ifelse(xtest_PCA$predPCA_test >.25,1,0)
+
+# Checking classification accuracy
+PCA_test = table(xtest_PCA$target,xtest_PCA$classes) 
+PCA_test
+
+# Checking classification accuracy
+t_PCA_test = table(xtest_PCA$target,xtest_PCA$classes) 
+t_PCA_test
+
+accuracy.PCA_test <- (t_PCA_test[1,1]+t_PCA_test[2,2])/(t_PCA_test[1,1]+
+                          t_PCA_test[1,2]+t_PCA_test[2,1]+t_PCA_test[2,2])
+
+# Compute row totals;
+r_PCA_test <- apply(t_PCA_test,MARGIN=1,FUN=sum);
+# Normalize confusion matrix to rates;
+matrix_PCA_test <- t_PCA_test/r_PCA_test
+matrix_PCA_test
+
+cat('PCA_test accuracy:',accuracy.PCA_test)
+```
+
+```{r}
+PCA.roc2_test <-roc(xtest_PCA$target,xtest_PCA$classes)
+plot(PCA.roc2_test)
+auc(PCA.roc2_test)
+```
+
+```{r}
+importance_PCA <- as.matrix(varImp(fit.PCA)$importance)
+importance_t <- as.data.frame(importance_PCA)
+importance_t$Variables <- row.names(importance_t)
+importance_t <- importance_t[,c("Variables","X1")]
+importance_t <- importance_t[order(-importance_t$X1),]
+row.names(importance_t) <- NULL
+importance_t
+```
+
+```{r}
+ggplot(importance_t, aes(x=reorder(Variables, X1), y=X1)) + 
+  geom_point() +
+  geom_segment(aes(x=Variables,xend=Variables,y=0,yend=X1)) +
+  #scale_color_discrete(name="Variable Group") +
+  ylab("Overall Measure (Variable was primary split)") +
+  xlab("Variable Name") +
+  coord_flip()
+```
+
+

@@ -29,29 +29,471 @@ These notebooks support analysis published in the [Summary: Model Development Gu
 This notebook summarizes two modelling techniques: Random Forest and Gradient Boosting.    
 EDA, Data Transformation, Linear modelling & PCA can be found in notebooks linked above.
 
-### Part 1 Data Overview
+## Part 1 Data Overview
 
+Data installed from RData file saved on local computer.  The original file can be foud in [github repository/data.](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/data/credit_card_default.RData){target="_blank"}  Data Exploration and transformation is outlined in part 1 of this project - [posted here.](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md){target="_blank"}
+```{r setup, message=FALSE,warning=FALSE}
+# Read the RData object using readRDS();
+credit_card_default <- readRDS('/Users/talentrics/credit_card_default.RData')
+#rename data set
+raw.data <- credit_card_default
+#update column name for 'PAY_0' to 'PAY_1'
+colnames(raw.data)[which(colnames
+    (raw.data) == 'PAY_0')] <- 'PAY_1'
+```
+### Data Transformation
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+*variable transformation of demographic data**
+```{r message=FALSE,warning=FALSE}
+#transform SEX variable to SEX_FEMALE (1=true)
+raw.data$SEX_FEMALE <- ifelse(raw.data$SEX == 2,1,0)
+
+#transform MARRIED variable to Married_Y (1=true)
+raw.data$Married_Y <- ifelse(raw.data$MARRIAGE == 1,1,0)
+
+#transform EDUCATION variable so all above 3 are (0 = Other)
+raw.data$EDUCATION[raw.data$EDUCATION > 3] <- 0
 ```
 
-## R Markdown
+*variable reduction of PAY_X, BILL_AMTX & PAY_AMTX vatiables**
+```{r message=FALSE,warning=FALSE}
+#create sum variable of PAY_1 : PAY_6 variables
+raw.data$PAY_X_Sum_6mo <- rowSums(cbind(raw.data$PAY_1,raw.data$PAY_2,
+                                  raw.data$PAY_3,raw.data$PAY_4,
+                                  raw.data$PAY_5,raw.data$PAY_6))
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+#create variable of max value of BILL_AMT1 : BILL_AMT6
+raw.data$Max_Bill_Amt <- pmax(raw.data$BILL_AMT1,raw.data$BILL_AMT2,
+                              raw.data$BILL_AMT3,raw.data$BILL_AMT4,
+                              raw.data$BILL_AMT5,raw.data$BILL_AMT6)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+#create variable of sum value of PAY_AMT1 : PAY_AMT6
+raw.data$PMT_SUM <- rowSums(cbind(raw.data$PAY_AMT1,raw.data$PAY_AMT2,
+                                  raw.data$PAY_AMT3,raw.data$PAY_AMT4,
+                                  raw.data$PAY_AMT5,raw.data$PAY_AMT6))
 
-```{r cars}
-summary(cars)
+#create variable of average of PAY_AMT1 : PAY_AMT6
+raw.data$Avg_Pmt_Amt <- raw.data$PMT_SUM/6
+
+## Create column Max_Pmt_Amt ##
+raw.data$Max_Pmt_Amt <- pmax(raw.data$PAY_AMT1,raw.data$PAY_AMT2,
+                                  raw.data$PAY_AMT3,raw.data$PAY_AMT4,
+                                  raw.data$PAY_AMT5,raw.data$PAY_AMT6)
 ```
 
-## Including Plots
+**AVG_Util - variable creation (Utilization = BILL_AMT/LIMIT_BAL)**
+```{r message=FALSE,warning=FALSE}
+#find utilization rate of each billing cycle (Utilization = BILL_AMT/LIMIT_BAL)
+raw.data$Util_Bill_1 <- raw.data$BILL_AMT1 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_2 <- raw.data$BILL_AMT2 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_3 <- raw.data$BILL_AMT3 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_4 <- raw.data$BILL_AMT4 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_5 <- raw.data$BILL_AMT5 / raw.data$LIMIT_BAL
+raw.data$Util_Bill_6 <- raw.data$BILL_AMT6 / raw.data$LIMIT_BAL
 
-You can also embed plots, for example:
+#create variable of sum values of utilization rates Util_Bill_1 : Util_Bill_6
+raw.data$Util_SUM = rowSums(cbind(raw.data$Util_Bill_1,raw.data$Util_Bill_2,
+                            raw.data$Util_Bill_3,raw.data$Util_Bill_4,
+                            raw.data$Util_Bill_5,raw.data$Util_Bill_6))
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+#take the average Utilization rate from Util_Bill_1 : Util_Bill_6
+raw.data$Avg_Util <- raw.data$Util_SUM/6
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+**Avg_Pay_Ratio - variable creation (Pay_Ratio = BILL_AMTX/PAY_AMTX-1)**
+```{r message=FALSE,warning=FALSE}
+## NOTE: PAY_AMT1 is lagging payment on BILL_AMT2 (only 5 measures) ##
+raw.data$Pay_Ratio_1 <- ifelse(raw.data$BILL_AMT2 > 0,
+                               (raw.data$PAY_AMT1 / raw.data$BILL_AMT2),1)
+raw.data$Pay_Ratio_2 <- ifelse(raw.data$BILL_AMT3 > 0,
+                               (raw.data$PAY_AMT2 / raw.data$BILL_AMT3),1)
+raw.data$Pay_Ratio_3 <- ifelse(raw.data$BILL_AMT4 > 0,
+                               (raw.data$PAY_AMT3 / raw.data$BILL_AMT4),1)
+raw.data$Pay_Ratio_4 <- ifelse(raw.data$BILL_AMT5 > 0,
+                               (raw.data$PAY_AMT4 / raw.data$BILL_AMT5),1)
+raw.data$Pay_Ratio_5 <- ifelse(raw.data$BILL_AMT6 > 0,
+                               (raw.data$PAY_AMT5 / raw.data$BILL_AMT6),1)
+
+raw.data$Ratio_SUM = rowSums(cbind(raw.data$Pay_Ratio_1,raw.data$Pay_Ratio_2,
+                             raw.data$Pay_Ratio_3,raw.data$Pay_Ratio_4,
+                             raw.data$Pay_Ratio_5))
+
+raw.data$Avg_Pay_Ratio <- raw.data$Ratio_SUM/5
+```
+
+**Max_DLQ - variable creation (max value of PAY_1 : PAY_6)**
+```{r message=FALSE,warning=FALSE}
+#find max value of variables PAY_1 : PAY_6
+raw.data$Max_DLQa <- pmax(raw.data$PAY_1,raw.data$PAY_2,raw.data$PAY_3,
+                          raw.data$PAY_4,raw.data$PAY_5,raw.data$PAY_6)
+
+#if Max_DLQa is below zero, set to zero, else max value of Max_DLQa
+raw.data$Max_DLQ <- ifelse(raw.data$Max_DLQa <= 0,0,raw.data$Max_DLQa)
+```
+
+**Balance_Growth_6mo - variable creation (∆ in difference from LIMIT_BAL to BILL_AMT over time)**
+```{r message=FALSE,warning=FALSE}
+raw.data$Balance_Growth_6mo <- (raw.data$LIMIT_BAL-raw.data$BILL_AMT6)-
+                          (raw.data$LIMIT_BAL-raw.data$BILL_AMT1)
+```
+
+**Util_Growth_6mo - variable creation (∆ in utilization Util_Bill_1 - Util_Bill_6)**
+```{r message=FALSE,warning=FALSE}
+raw.data$Util_Growth_6mo <- raw.data$Util_Bill_1 - raw.data$Util_Bill_6
+```
+
+**target - transform response variable 'DEFAULT' into factor**
+```{r message=FALSE,warning=FALSE}
+raw.data$target <- as.factor(raw.data$DEFAULT)
+```
+
+**initial data set for 'tree' type models using continuous variables**
+```{r message=FALSE,warning=FALSE}
+sub_list_RF1 <- c("LIMIT_BAL","SEX_FEMALE","EDUCATION",
+               "Married_Y","AGE","PAY_X_Sum_6mo","Avg_Pmt_Amt","Avg_Util","Avg_Pay_Ratio",
+               "Balance_Growth_6mo","Util_Growth_6mo","Max_Bill_Amt","Max_Pmt_Amt",
+               "Max_DLQ","DEFAULT")
+
+xtrain_RF1 <- subset(raw.data, select = sub_list_RF1, data.group == 1)
+xtest_RF1 <- subset(raw.data, select = sub_list_RF1, data.group == 2)
+validate_RF1 <- subset(raw.data, select = sub_list_RF1, data.group == 3)
+
+str(xtrain_RF1)
+```
+
+## Correlation Check & final variable selection: 
+```{r message=FALSE,warning=FALSE}
+#install.packages("corrplot")
+library(corrplot)
+```
+
+```{r message=FALSE,warning=FALSE}
+data.cor = cor(xtrain_RF1, method = c("spearman"))
+corrplot(data.cor, type = "lower", tl.col = "black", tl.srt = 45)
+```
+
+```{r message=FALSE,warning=FALSE}
+# check correlation of BILL_X Sum Variable
+Train_RF1.correlation <- cor(raw.data[,sub_list_RF1])
+Train_RF1.correlation <- as.data.frame(Train_RF1.correlation)
+Train_RF1.correlation <- Train_RF1.correlation[15]
+Train_RF1.correlation$Variables <- row.names(Train_RF1.correlation)
+Train_RF1.correlation <- Train_RF1.correlation[,c("Variables","DEFAULT")]
+Train_RF1.correlation <- Train_RF1.correlation[order(Train_RF1.correlation$DEFAULT),]
+row.names(Train_RF1.correlation) <- NULL
+Train_RF1.correlation
+```
+
+```{r message=FALSE,warning=FALSE}
+library(vcd)
+mosaic(~ DEFAULT + Max_DLQ, 
+       data = xtrain_RF1, shade=TRUE, legend=TRUE)
+```
+
+```{r message=FALSE,warning=FALSE}
+mosaic(~ SEX_FEMALE + DEFAULT | Married_Y, 
+       data = xtrain_RF1, shade=TRUE, legend=TRUE)
+```
+
+```{r message=FALSE,warning=FALSE}
+raw.data$target <- as.factor(raw.data$DEFAULT)
+
+sub_list_RFb <- c("LIMIT_BAL","SEX_FEMALE","EDUCATION",
+               "Married_Y","AGE","PAY_X_Sum_6mo","Avg_Pmt_Amt",
+               "Balance_Growth_6mo","Max_Bill_Amt","Max_DLQ","target")
+
+xtrain_RF1 <- subset(raw.data, select = sub_list_RFb, data.group == 1)
+xtest_RF1 <- subset(raw.data, select = sub_list_RFb, data.group == 2)
+validate_RF1 <- subset(raw.data, select = sub_list_RFb, data.group == 3)
+
+str(xtrain_RF1)
+```
+
+
+```{r message=FALSE,warning=FALSE}
+library(rpart)
+library(rpart.plot)
+
+fit <- rpart(target ~ .,data=xtrain_RF1,
+             control=rpart.control(minsplit=800,minbucket = 15,cp=0.001))
+
+rpart.plot(fit, type=3, main="Classification Tree for Train Data")
+    text(fit, use.n=TRUE, all=TRUE, cex=.8)
+```
+
+```{r}
+importance <- varImp(fit)
+importance_t <- as.data.frame(importance)
+importance_t$Variables <- row.names(importance_t)
+importance_t <- importance_t[,c("Variables","Overall")]
+importance_t <- importance_t[order(-importance_t$Overall),]
+row.names(importance_t) <- NULL
+importance_t
+```
+
+```{r}
+library(ggplot2)
+ggplot(importance_t, aes(x=reorder(Variables, Overall), y=Overall)) + 
+  geom_point() +
+  geom_segment(aes(x=Variables,xend=Variables,y=0,yend=Overall)) +
+  #scale_color_discrete(name="Variable Group") +
+  ylab("Overall Measure (Variable was primary split)") +
+  xlab("Variable Name") +
+  coord_flip()
+```
+
+
+```{r message=FALSE,warning=FALSE}
+#install.packages("randomForest")
+library(caret)
+#install.packages("tidyverse")
+library(tidyverse)
+library(pROC)
+```
+**Random Forest Model**
+```{r}
+fit.rf <- train(target ~ .,data = xtrain_RF1,method = "rf")
+```
+
+```{r}
+# Predicting probability of survival using predict type 'prob'
+predRF1_prob <- predict(fit.rf, newdata = xtrain_RF1, type = "prob")
+
+#create column with likelihood factor
+xtrain_RF1$predRF1_prob <- abs(as.numeric(predRF1_prob$'1'))
+summary(xtrain_RF1$predRF1_prob)
+#create binary classifier based on threshold values
+xtrain_RF1$classes <- ifelse(xtrain_RF1$predRF1_prob >.3,1,0)
+
+# Checking classification accuracy
+RF1_train = table(xtrain_RF1$target,xtrain_RF1$classes) 
+RF1_train
+
+# Checking classification accuracy
+t_RF1_train = table(xtrain_RF1$target,xtrain_RF1$classes) 
+t_RF1_train
+
+accuracy.RF1_train <- (t_RF1_train[1,1]+t_RF1_train[2,2])/(t_RF1_train[1,1]+
+                          t_RF1_train[1,2]+t_RF1_train[2,1]+t_RF1_train[2,2])
+
+# Compute row totals;
+r_RF1_train <- apply(t_RF1_train,MARGIN=1,FUN=sum);
+# Normalize confusion matrix to rates;
+matrix_RF1_train <- t_RF1_train/r_RF1_train
+matrix_RF1_train
+
+cat('RF1_train accuracy:',accuracy.RF1_train)
+```
+
+```{r}
+rf.roc1 <-roc(xtrain_RF1$target,xtrain_RF1$classes)
+plot(rf.roc1)
+auc(rf.roc1)
+```
+
+```{r}
+### Predicting on test set  ##
+predRF1_test <- predict(fit.rf, xtest_RF1, type = "prob")
+xtest_RF1$predRF1_num <- abs(as.numeric(predRF1_test$`1`))
+xtest_RF1$classes <- ifelse(xtest_RF1$predRF1_num >.25,1,0)
+
+# Checking classification accuracy
+t_RF1_test = table(xtest_RF1$target,xtest_RF1$classes) 
+t_RF1_test
+
+accuracy.RF1_test <- (t_RF1_test[1,1]+t_RF1_test[2,2])/(t_RF1_test[1,1]+
+                          t_RF1_test[1,2]+t_RF1_test[2,1]+t_RF1_test[2,2])
+
+# Compute row totals;
+r_RF1_test <- apply(t_RF1_test,MARGIN=1,FUN=sum);
+# Normalize confusion matrix to rates;
+matrix_RF1_test <- t_RF1_test/r_RF1_test
+matrix_RF1_test
+
+cat('RF1_test accuracy:',accuracy.RF1_test)
+```
+
+```{r}
+sub_list_RFc <- c("LIMIT_BAL","SEX_FEMALE","EDUCATION",
+               "Married_Y","AGE","PAY_X_Sum_6mo","Avg_Pmt_Amt",
+               "Balance_Growth_6mo","Max_Bill_Amt","Max_DLQ","target")
+
+xtrain_RF2 <- subset(raw.data, select = sub_list_RFc, data.group == 1)
+xtest_RF2 <- subset(raw.data, select = sub_list_RFc, data.group == 2)
+validate_RF2 <- subset(raw.data, select = sub_list_RFc, data.group == 3)
+
+str(xtrain_RF2)
+```
+
+**control RF devleopment to limit over training**
+```{r}
+# Random Search
+control <- trainControl(method="repeatedcv", number=10, repeats=2, search="random")
+seed <- 7
+set.seed(seed)
+metric = "Accuracy"
+ntree = 500
+mtry <- 5
+rf_random <- train(target ~., data=xtrain_RF2, method="rf", 
+                   metric=metric, tuneLength=10,trControl=control)
+print(rf_random)
+plot(rf_random)
+```
+
+## model RF2
+```{r}
+seed <- 7
+set.seed(seed)
+fit.rf2 <- train(target ~ .,data = xtrain_RF2,method = "rf",tuneLength=2,trControl=control)
+```
+
+
+```{r}
+# Predicting probability of survival using predict type 'prob'
+predRF2_prob <- predict(fit.rf2, newdata = xtrain_RF2, type = "prob")
+
+#create column with likelihood factor
+xtrain_RF2$predRF2_prob <- abs(as.numeric(predRF2_prob$'1'))
+summary(xtrain_RF2$predRF2_prob)
+#create binary classifier based on threshold values
+xtrain_RF2$classes <- ifelse(xtrain_RF2$predRF2_prob >.3,1,0)
+
+# Checking classification accuracy
+t_RF2_train = table(xtrain_RF2$target,xtrain_RF2$classes) 
+t_RF2_train
+
+accuracy.RF2_train <- (t_RF2_train[1,1]+t_RF2_train[2,2])/(t_RF2_train[1,1]+
+                          t_RF2_train[1,2]+t_RF2_train[2,1]+t_RF2_train[2,2])
+
+# Compute row totals;
+r_RF2_train <- apply(t_RF2_train,MARGIN=1,FUN=sum);
+# Normalize confusion matrix to rates;
+matrix_RF2_train <- t_RF2_train/r_RF2_train
+matrix_RF2_train
+
+cat('RF2_train accuracy:',accuracy.RF2_train)
+```
+
+```{r}
+rf.roc2 <-roc(xtrain_RF2$target,xtrain_RF2$classes)
+plot(rf.roc2)
+auc(rf.roc2)
+```
+
+
+```{r}
+### Predicting on test set  ##
+predRF2_test <- predict(fit.rf2, xtest_RF2, type = "prob")
+xtest_RF2$predRF2_num <- abs(as.numeric(predRF2_test$`1`))
+xtest_RF2$classes <- ifelse(xtest_RF2$predRF2_num >.3,1,0)
+
+# Checking classification accuracy
+t_RF2_test = table(xtest_RF2$target,xtest_RF2$classes) 
+t_RF2_test
+
+accuracy.RF2_test <- (t_RF2_test[1,1]+t_RF2_test[2,2])/(t_RF2_test[1,1]+
+                          t_RF2_test[1,2]+t_RF2_test[2,1]+t_RF2_test[2,2])
+
+# Compute row totals;
+r_RF2_test <- apply(t_RF2_test,MARGIN=1,FUN=sum);
+# Normalize confusion matrix to rates;
+matrix_RF2_test <- t_RF2_test/r_RF2_test
+matrix_RF2_test
+
+cat('RF2_test accuracy:',accuracy.RF2_test)
+```
+
+```{r}
+rf.roc2_test <-roc(xtest_RF2$target,xtest_RF2$classes)
+plot(rf.roc2_test)
+auc(rf.roc2_test)
+```
+## Gradient Boosting method
+
+**set up train/test/validate data**
+```{r}
+sub_list_GBM <- c("LIMIT_BAL","SEX_FEMALE","EDUCATION",
+               "Married_Y","AGE","PAY_X_Sum_6mo","Avg_Pmt_Amt",
+               "Balance_Growth_6mo","Max_Bill_Amt","Max_DLQ","target")
+
+xtrain_GBM <- subset(raw.data, select = sub_list_GBM, data.group == 1)
+xtest_GBM <- subset(raw.data, select = sub_list_GBM, data.group == 2)
+validate_GBM <- subset(raw.data, select = sub_list_GBM, data.group == 3)
+str(xtrain_GBM)
+```
+
+
+```{r}
+control <- trainControl(method="repeatedcv", number=10, repeats=2, search="random")
+
+GBM <- train(target ~ ., data = xtrain_GBM, 
+                 method = "gbm", tuneLength=2,
+                 trControl = control,
+                 ## This last option is actually one
+                 ## for gbm() that passes through
+                 verbose = FALSE)
+```
+
+**measure train accuracy**
+```{r}
+# Predicting on training set
+
+predGBM_prob <- predict(GBM, newdata = xtrain_GBM,type ="prob")
+
+#create column with likelihood factor
+xtrain_GBM$predGBM_num <- abs(as.numeric(predGBM_prob$`1`))
+#create binary classifier based on threshold values
+xtrain_GBM$classes <- ifelse(xtrain_GBM$predGBM_num >.2,1,0)
+#create roc curve
+roc_GBM_train <-roc(xtrain_GBM$target,xtrain_GBM$classes)
+
+plot(roc_GBM_train)
+auc(roc_GBM_train)
+
+# Checking classification accuracy
+t_GBM_train = table(xtrain_GBM$target,xtrain_GBM$classes) 
+t_GBM_train
+
+accuracy.GBM_train <- (t_GBM_train[1,1]+t_GBM_train[2,2])/(t_GBM_train[1,1]+
+                      t_GBM_train[1,2]+t_GBM_train[2,1]+t_GBM_train[2,2])
+
+accuracy.GBM_train
+
+# Compute row totals;
+r_GBM_train <- apply(t_GBM_train,MARGIN=1,FUN=sum);
+# Normalize confusion matrix to rates;
+matrix_GBM_train <- t_GBM_train/r_GBM_train
+matrix_GBM_train
+
+cat('GBM_train accuracy:',accuracy.GBM_train)
+```
+
+```{r}
+### Predicting on test set  ##
+predGBM_test <- predict(GBM, xtest_GBM, type = "prob")
+
+xtest_GBM$predGBM_num <- abs(as.numeric(predGBM_test$`1`))
+xtest_GBM$classes <- ifelse(xtest_GBM$predGBM_num >.2,1,0)
+
+#create roc curve
+roc_GBM_test <-roc(xtest_GBM$target,xtest_GBM$classes)
+
+plot(roc_GBM_test)
+auc(roc_GBM_test)
+
+# Checking classification accuracy
+t_GBM_test = table(xtest_GBM$target,xtest_GBM$classes) 
+t_GBM_test
+
+accuracy.GBM_test <- (t_GBM_test[1,1]+t_GBM_test[2,2])/(t_GBM_test[1,1]+
+                          t_GBM_test[1,2]+t_GBM_test[2,1]+t_GBM_test[2,2])
+
+accuracy.GBM_test
+
+# Compute row totals;
+r_GBM_test <- apply(t_GBM_test,MARGIN=1,FUN=sum);
+# Normalize confusion matrix to rates;
+matrix_GBM_test <- t_GBM_test/r_GBM_test
+matrix_GBM_test
+```
+
