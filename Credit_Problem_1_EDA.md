@@ -102,6 +102,22 @@ library(woeBinning)
 
 #install.packages("dplyr")
 library(dplyr)
+```
+
+    ## Warning: package 'dplyr' was built under R version 3.5.2
+
+    ## 
+    ## Attaching package: 'dplyr'
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     filter, lag
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     intersect, setdiff, setequal, union
+
+``` r
 library(ggplot2)
 
 ## MultiPlot Function: 
@@ -191,6 +207,12 @@ limit.hist.plot <-
 # Printing both plots near each other
 MultiPlot(limit.hist.plot, cols = 1)
 ```
+
+    ## Loading required package: grid
+
+    ## Warning: Removed 79 rows containing non-finite values (stat_bin).
+
+    ## Warning: Removed 2 rows containing missing values (geom_bar).
 
 ![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
@@ -300,7 +322,7 @@ summary(raw.data$Married_Y)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##  0.0000  0.0000  0.0000  0.4553  1.0000  1.0000
 
-**Categorical frequency - EDUCATION**
+**EDUCATION - Categorical frequency**
 
 ``` r
 ed_summary <-raw.data[,c(4)]
@@ -375,7 +397,7 @@ ed_table3
 
 ## Explore & Transform - AGE
 
-**data description:** integer - age of customer in years
+**AGE - data description:** integer - age of customer in years
 
 ``` r
 summary(raw.data$AGE)
@@ -384,7 +406,7 @@ summary(raw.data$AGE)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   21.00   28.00   34.00   35.49   41.00   79.00
 
-**Histogram - AGE**
+**AGE - Histogram**
 
 ``` r
 # Getting ID and AGE columns only
@@ -408,7 +430,7 @@ MultiPlot(age.hist.plot, cols = 1)
 ```
 
 ![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
-**bin analysis - AGE** - investigate binning options for variable split
+**AGE - bin analysis** - investigate binning options for variable split
 
 ``` r
 # Check bins LIMIT_BAL
@@ -430,7 +452,7 @@ table_AGE
     ## 4    <= Inf        4669  15.6%    3491    1178 25.2% -17.2
     ## 6     Total       30000 100.0%   23364    6636 22.1%    NA
 
-**recommended transformation - AGE** Dummy variables if AGE is below 25,
+**AGE recommended transformation** Dummy variables if AGE is below 25,
 25:35 & above 40  
 Leave out \>35 & \< 40 as cross correlation would render this variable
 irrelevant.
@@ -484,7 +506,7 @@ summary(raw.data[,c(10:12)])
     ##  3rd Qu.: 0.0000   3rd Qu.: 0.0000   3rd Qu.: 0.0000  
     ##  Max.   : 8.0000   Max.   : 8.0000   Max.   : 8.0000
 
-**Histogram - PAY\_X Variables**
+**PAY\_X Variables - Histogram**
 
 ``` r
 # Converting columns to factors according to the data description 
@@ -506,7 +528,7 @@ MultiPlot(plotlist = pay.histograms, cols = 3)
 ```
 
 ![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
-**observation PAY\_X:** negative numbers to -2 (assumption of
+**PAY\_X observation:** negative numbers to -2 (assumption of
 pre-payment) up to +8 (default)  
 High cross correlation between PAY\_X variables - recommend to summarize
 PAY\_X
@@ -529,7 +551,7 @@ PAY_X.correlation
     ## PAY_6   0.1868664
     ## DEFAULT 1.0000000
 
-**recommended transformation - PAY\_X** create **$PAY\_X\_Sum\_6mo**
+**PAY\_X recommended transformation** create **$PAY\_X\_Sum\_6mo**
 variable
 
 ``` r
@@ -542,7 +564,7 @@ summary(raw.data$PAY_X_Sum_6mo)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ## -12.000  -5.000   0.000  -1.095   0.000  36.000
 
-**bin analysis - PAY\_X\_Sum\_6mo** - investigate binning options for
+**PAY\_X\_Sum\_6mo - bin analysis** - investigate binning options for
 variable split
 
 ``` r
@@ -565,7 +587,7 @@ table_X
     ## 3    <= Inf        3183  10.6%    1172    2011 63.2% -179.9
     ## 5     Total       30000 100.0%   23364    6636 22.1%     NA
 
-**recommended transformation - PAY\_X\_Sum\_6mo** Dummy variables if
+**PAY\_X\_Sum\_6mo - recommended transformation** Dummy variables if
 PAY\_X\_sum is below 0 or above 5  
 Leave out \> 0 to \<=5 as cross correlation would render this variable
 irrelevant.
@@ -585,7 +607,7 @@ summary(raw.data[,c('PAY_X_Sum_6mo_belowZero','PAY_X_Sum_6mo_aboveFive')])
     ##  3rd Qu.:1.0000          3rd Qu.:0.0000         
     ##  Max.   :1.0000          Max.   :1.0000
 
-**observation - PAY\_X\_Sum\_6mo:** binning PAY\_X\_Sum as per WOE
+**PAY\_X\_Sum\_6mo - observation:** binning PAY\_X\_Sum as per WOE
 maximizes correlation variance
 
 ``` r
@@ -605,10 +627,10 @@ PAY_X.correlation2
 **Binning for regression analysis - in case of tree analysis, continuous
 variable recommended.**
 
-## Explore & Transform - Bill\_AMTX
+## Explore & Transform - BILL\_AMTX
 
-**data description:** the amount of Bill Statement for 6 months April
-(1) to September (6)
+**BILL\_AmtX - data description:** the amount of Bill Statement for 6
+months April (1) to September (6)
 
 ``` r
 summary(raw.data[,c(13:15)])
@@ -634,7 +656,7 @@ summary(raw.data[,c(16:18)])
     ##  3rd Qu.:  54506   3rd Qu.: 50190   3rd Qu.:  49198  
     ##  Max.   : 891586   Max.   :927171   Max.   : 961664
 
-**Histogram - BILL\_AMTX Variables**
+**BILL\_AmtX - Histogram**
 
 ``` r
 # Getting BILL_AMT1..6 columns only
@@ -723,7 +745,7 @@ MultiPlot(plotlist = HistogramsFromVariables(bill.raw.data,
 
 ![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
 
-**observation - BILL\_AMTX:** …  
+**BILL\_AmtX - observation** …  
 High cross correlation between BILL\_X variables - recommend to
 summarize BILL\_X
 
@@ -745,7 +767,7 @@ BILL_X.correlation
     ## BILL_AMT6 -0.005372315
     ## DEFAULT    1.000000000
 
-**recommended transformation - BILL\_AMTX** develop variable to capture
+**BILL\_AmtX - recommended transformation** develop variable to capture
 bill/pay ratio
 
 ``` r
@@ -763,8 +785,15 @@ raw.data$Max_Bill_Amt <- pmax(raw.data$BILL_AMT1,raw.data$BILL_AMT2,
 
 raw.data$Max_Bill_Amt_Sq <- raw.data$Max_Bill_Amt^2
 raw.data$Max_Bill_Amt_Sqrt <- sqrt(raw.data$Max_Bill_Amt)
+```
+
+    ## Warning in sqrt(raw.data$Max_Bill_Amt): NaNs produced
+
+``` r
 raw.data$Max_Bill_Amt_Log <- log(raw.data$Max_Bill_Amt)
 ```
+
+    ## Warning in log(raw.data$Max_Bill_Amt): NaNs produced
 
 **BILL\_X - analyze most highly correlated variable type**
 
@@ -785,7 +814,7 @@ BILL_X.correlation
     ## Max_Bill_Amt_Sq -0.01613578
     ## DEFAULT          1.00000000
 
-**Histogram - Max\_Bill\_Amt**
+**Max\_Bill\_Amt - Histogram**
 
 ``` r
 Max_bill_df <- raw.data[,c('ID','Max_Bill_Amt')]
@@ -796,7 +825,7 @@ summary(Max_bill_df$Max_Bill_Amt)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   -6029   10060   31208   60572   79599 1664089
 
-**bin analysis - Max\_Bill\_Amt** - investigate binning options for
+**Max\_Bill\_Amt - bin analysis** - investigate binning options for
 variable split
 
 ``` r
@@ -822,7 +851,7 @@ Max_Bill_table
     ## 6      <= Inf       10500  35.0%    8509    1991 19.0%  19.4
     ## 8       Total       30000 100.0%   23364    6636 22.1%    NA
 
-**recommended transformation - Max\_Bill\_Amt** Create bins for
+**Max\_Bill\_Amt - recommended transformation** Create bins for
 Max\_Bill variable as per WOE max  
 Leave out \> 21k & \<= 52k as cross correlation would render this
 variable irrelevant.
@@ -857,7 +886,7 @@ summary(raw.data[,c('Max_Bill_Amt_below_600','Max_Bill_Amt_below_4k',
     ##  3rd Qu.:0.0000         3rd Qu.:1.0000        
     ##  Max.   :1.0000         Max.   :1.0000
 
-**observation - Max\_Bill\_Amt:** binning PAY\_X\_Sum as per WOE
+**Max\_Bill\_Amt - observation:** binning PAY\_X\_Sum as per WOE
 maximizes correlation variance
 
 ``` r
@@ -911,7 +940,7 @@ summary(raw.data[,c(22:24)])
     ##  3rd Qu.:  4013   3rd Qu.:  4031.5   3rd Qu.:  4000.0  
     ##  Max.   :621000   Max.   :426529.0   Max.   :528666.0
 
-**Histogram - PAY\_AMTX Variables**
+**PAY\_AMTX - Histogram**
 
 ``` r
 # Getting PAY_AMTX1..6 columns only
@@ -1000,7 +1029,7 @@ MultiPlot(plotlist = HistogramsFromVariables(pay_amt,
 
 ![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-42-1.png)<!-- -->
 
-**observation - PAY\_AMTX:** …  
+**PAY\_AMTX - observation:** …  
 High cross correlation between BILL\_X variables - recommend to
 summarize BILL\_X
 
@@ -1022,7 +1051,7 @@ PAY_AMTX.correlation
     ## PAY_AMT6 -0.05318334
     ## DEFAULT   1.00000000
 
-**recommended transformation - PAY\_AMTX** develop variable to capture
+**PAY\_AMTX - recommended transformation** develop variable to capture
 pay ratio
 
 ``` r
@@ -1039,24 +1068,7 @@ raw.data$Max_Pmt_Amt <- pmax(raw.data$PAY_AMT1,raw.data$PAY_AMT2,
                                   raw.data$PAY_AMT5,raw.data$PAY_AMT6)
 ```
 
-**PAY\_AMTX - analyze most highly correlated variable type**
-
-``` r
-# check correlation of BILL_X Sum Variable
-PAY_AMTX.correlation <- cor(raw.data[,c('PMT_SUM','Avg_Pmt_Amt',
-                                      'Max_Pmt_Amt','DEFAULT')])
-PAY_AMTX.correlation <- as.data.frame(PAY_AMTX.correlation)
-PAY_AMTX.correlation <- PAY_AMTX.correlation[4]
-PAY_AMTX.correlation
-```
-
-    ##                 DEFAULT
-    ## PMT_SUM     -0.10235439
-    ## Avg_Pmt_Amt -0.10235439
-    ## Max_Pmt_Amt -0.08184059
-    ## DEFAULT      1.00000000
-
-**Histogram - Avg\_Pmt\_Amt**
+**Avg\_Pmt\_Amt - Histogram**
 
 ``` r
 Avg_Pmt_df <- raw.data[,c('ID','Avg_Pmt_Amt')]
@@ -1066,7 +1078,7 @@ summary(Avg_Pmt_df$Avg_Pmt_Amt)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##       0    1113    2397    5275    5584  627344
 
-**bin analysis - Max\_Bill\_Amt** - investigate binning options for
+**Avg\_Pmt\_Amt - bin analysis** - investigate binning options for
 variable split
 
 ``` r
@@ -1089,7 +1101,7 @@ Avg_Pmt_bin_table
     ## 3         <= Inf        3000  10.0%    2711     289  9.6%  98.0
     ## 5          Total       30000 100.0%   23364    6636 22.1%    NA
 
-**recommended transformation - Max\_Bill\_Amt** Create bins for Avg\_Pmt
+**Avg\_Pmt\_Amt - recommended transformation** Create bins for Avg\_Pmt
 variable as per WOE max  
 Leave out \> 2k & \<= 12k as cross correlation would render this
 variable irrelevant.
@@ -1110,7 +1122,7 @@ summary(raw.data[,c('Avg_Pmt_Amt_below2k','Avg_Pmt_Amt_above12k')])
     ##  3rd Qu.:1.00        3rd Qu.:0.0000      
     ##  Max.   :1.00        Max.   :1.0000
 
-**observation - Max\_Bill\_Amt:** binning PAY\_X\_Sum as per WOE
+**Avg\_Pmt\_Amt - observation:** binning PAY\_X\_Sum as per WOE
 maximizes correlation variance
 
 ``` r
@@ -1132,7 +1144,7 @@ variable recommended.**
 
 ## Create new variable: Avg\_Util
 
-**data description Avg\_Util** amount of balance limit used
+**Avg\_Util - data description** amount of balance limit used
 (BILL\_AMTX/LIMIT\_BAL)
 
 ``` r
@@ -1154,7 +1166,7 @@ summary(raw.data$Avg_Util)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ## -0.2326  0.0300  0.2848  0.3730  0.6879  5.3643
 
-**Histogram - Avg\_Util**
+**Avg\_Util - Histogram**
 
 ``` r
 # Getting ID and Avg_Util columns only
@@ -1164,7 +1176,7 @@ Avg_Util_df <- raw.data[c('Avg_Util')]
 Avg_Util.hist.plot <-
   ggplot(data = Avg_Util_df, 
          aes(x = Avg_Util_df$Avg_Util)) +
-  geom_histogram(binwidth = .1,
+  geom_histogram(binwidth = .05,
                  colour = "black", fill = "white") +
   geom_vline(aes(xintercept = .03), 
              colour = "#BB0000", linetype = "dashed") +
@@ -1178,9 +1190,13 @@ Avg_Util.hist.plot <-
 MultiPlot(Avg_Util.hist.plot, cols = 1)
 ```
 
-![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-51-1.png)<!-- -->
+    ## Warning: Removed 644 rows containing non-finite values (stat_bin).
 
-**bin analysis - Avg\_Util** - investigate binning options for variable
+    ## Warning: Removed 2 rows containing missing values (geom_bar).
+
+![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-50-1.png)<!-- -->
+
+**Avg\_Util - bin analysis** - investigate binning options for variable
 split
 
 ``` r
@@ -1203,7 +1219,7 @@ Avg_Util_bin_table
     ## 3            <= Inf       12000  40.0%    8640    3360 28.0% -31.4
     ## 5             Total       30000 100.0%   23364    6636 22.1%    NA
 
-**recommended transformation - Avg\_Util** Create bins for Avg\_Util
+**Avg\_Util - recommended transformation** Create bins for Avg\_Util
 variable as per WOE max  
 Leave out \> .001 & \<= .45 as cross correlation would render this
 variable irrelevant.
@@ -1225,7 +1241,7 @@ summary(raw.data[,c('Avg_Util_below_.001','Avg_Util_above_.45')])
 
 ## Create new variable: Avg\_Pay\_Ratio
 
-**data description Avg\_Pay\_Ratio** amount paid against bill
+**Avg\_Pay\_Ratio - data description** amount paid against bill
 (BILL\_AMTX+1/PAY\_AMTX)
 
 ``` r
@@ -1252,7 +1268,7 @@ summary(raw.data$Avg_Pay_Ratio)
     ##      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
     ##    0.0000    0.0479    0.1977    0.5764    0.9038 2667.2000
 
-**Histogram - Avg\_Pay\_Ratio**
+**Avg\_Pay\_Ratio - Histogram**
 
 ``` r
 # Getting ID and Avg_Util columns only
@@ -1262,7 +1278,7 @@ Pay_Ratio_df <- raw.data[c('Avg_Pay_Ratio')]
 Avg_Pay_Ratio.hist.plot <-
   ggplot(data = Pay_Ratio_df, 
          aes(x = Pay_Ratio_df$Avg_Pay_Ratio)) +
-  geom_histogram(binwidth = .1,
+  geom_histogram(binwidth = .05,
                  colour = "black", fill = "white") +
   geom_vline(aes(xintercept = .03), 
              colour = "#BB0000", linetype = "dashed") +
@@ -1276,9 +1292,13 @@ Avg_Pay_Ratio.hist.plot <-
 MultiPlot(Avg_Pay_Ratio.hist.plot, cols = 1)
 ```
 
-![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-55-1.png)<!-- -->
+    ## Warning: Removed 401 rows containing non-finite values (stat_bin).
 
-**bin analysis - Avg\_Pay\_Ratio** - investigate binning options for
+    ## Warning: Removed 2 rows containing missing values (geom_bar).
+
+![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-54-1.png)<!-- -->
+
+**Avg\_Pay\_Ratio - bin analysis** - investigate binning options for
 variable split
 
 ``` r
@@ -1302,7 +1322,7 @@ Avg_Pay_Ratio_bin_table
     ## 4           <= Inf        3105  10.3%    2754     351 11.3%   80.1
     ## 6            Total       30000 100.0%   23364    6636 22.1%     NA
 
-**recommended transformation - Avg\_Pay\_Ratio** Create bins as per WOE
+**Avg\_Pay\_Ratio - recommended transformation** Create bins as per WOE
 max  
 Leave out \> .113 & \<= 1 as cross correlation would render this
 variable irrelevant.
@@ -1328,7 +1348,7 @@ summary(raw.data[,c('Avg_Pay_Ratio_below_.035',
 
 ## Create new variable: Max\_DLQ
 
-**data description Max\_DLQ** max value in PAY\_X variables across
+**Max\_DLQ - data description** max value in PAY\_X variables across
 period
 
 ``` r
@@ -1342,7 +1362,27 @@ summary(raw.data$Max_DLQ)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##  0.0000  0.0000  0.0000  0.6822  2.0000  8.0000
 
-**bin analysis - Max\_DLQ** - investigate binning options for variable
+``` r
+DLQ_summary <-raw.data[,c('Max_DLQ')]
+DLQ_table <- as.data.frame(table(DLQ_summary))
+colnames(DLQ_table) <- c('Max_DLQ','Freq')
+DLQ_table$PCT <- DLQ_table$Freq/30000
+DLQ_table$PCT <- paste(round(DLQ_table$PCT*100,digits=1),"%",sep="")
+DLQ_table
+```
+
+    ##   Max_DLQ  Freq   PCT
+    ## 1       0 19931 66.4%
+    ## 2       1  1689  5.6%
+    ## 3       2  7187   24%
+    ## 4       3   789  2.6%
+    ## 5       4   218  0.7%
+    ## 6       5    69  0.2%
+    ## 7       6    25  0.1%
+    ## 8       7    67  0.2%
+    ## 9       8    25  0.1%
+
+**Max\_DLQ - bin analysis** - investigate binning options for variable
 split
 
 ``` r
@@ -1364,7 +1404,7 @@ Max_DLQ_bin_table
     ## 2    <= Inf        8380  27.9%    4500    3880 46.3% -111.0
     ## 4     Total       30000 100.0%   23364    6636 22.1%     NA
 
-**recommended transformation - Max\_DLQ** Create bins as per WOE max  
+**Max\_DLQ - recommended transformation** Create bins as per WOE max  
 Leave out \<= 1 as cross correlation would render this variable
 irrelevant.
 
@@ -1379,7 +1419,7 @@ summary(raw.data$Max_DLQ_above1)
 
 ## Create new variables: Bal\_Growth\_6mo
 
-**data description Bal\_Growth\_6mo** change in credit balance over
+**Bal\_Growth\_6mo - data description** change in credit balance over
 period ()
 
 ``` r
@@ -1391,8 +1431,32 @@ summary(raw.data$Balance_Growth_6mo)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ## -428791   -2963     923   12352   19794  708323
 
-**bin analysis - Balance\_Growth\_6mo** - investigate binning options
-for variable split
+``` r
+# Getting ID and Balance_Growth_6mo columns only
+Bal_Growth_df <- raw.data[c('Balance_Growth_6mo')]
+
+# Generating a histogram for the Avg_Pay_Ratio variable with a vertical cutoff line
+Bal_growth.hist.plot <-
+  ggplot(data = Bal_Growth_df, 
+         aes(x = Bal_Growth_df$Balance_Growth_6mo)) +
+  geom_histogram(binwidth = 1000,
+                 colour = "black", fill = "white") +
+  geom_vline(aes(xintercept = -2963), 
+             colour = "#BB0000", linetype = "dashed") +
+  geom_vline(aes(xintercept = 19794), 
+             colour = "#BB0000", linetype = "dashed") +
+  theme_minimal() +
+  xlim(-3000,20000) +
+  xlab("Balance_Growth_6mo")
+
+# Printing both plots near each other
+MultiPlot(Bal_growth.hist.plot, cols = 1)
+```
+
+![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-62-1.png)<!-- -->
+
+**Bal\_Growth\_6mo - bin analysis** - investigate binning options for
+variable split
 
 ``` r
 # check WOE recommended binning and correlation in PAY_X
@@ -1415,8 +1479,8 @@ Bal_growth_bin_table
     ## 4      <= Inf       14998  50.0%   12329    2669 17.8%  27.2
     ## 6       Total       30000 100.0%   23364    6636 22.1%    NA
 
-**recommended transformation - Balance\_Growth\_6mo** Create bins as per
-WOE max  
+**Bal\_Growth\_6mo - recommended transformation** Create bins as per WOE
+max  
 Leave out \> -10k & \<= 1k as cross correlation would render this
 variable irrelevant.
 
@@ -1451,7 +1515,7 @@ summary(raw.data[,c('Balance_Growth_6mo_below_minus21k',
 
 ## Create new variable: Util\_Growth\_6mo
 
-**data description Util\_Growth\_6mo** change in utilization over 6
+**Util\_Growth\_6mo - data description** change in utilization over 6
 months
 
 ``` r
@@ -1463,7 +1527,31 @@ summary(raw.data$Util_Growth_6mo)
     ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
     ## -1.82730 -0.02910  0.00686  0.10519  0.18120  5.30950
 
-**bin analysis - Util\_Growth\_6mo** - investigate binning options for
+``` r
+# Getting ID and Balance_Growth_6mo columns only
+Util_Growth_df <- raw.data[c('Util_Growth_6mo')]
+
+# Generating a histogram for the Avg_Pay_Ratio variable with a vertical cutoff line
+Util_growth.hist.plot <-
+  ggplot(data = Util_Growth_df, 
+         aes(x = Util_Growth_df$Util_Growth_6mo)) +
+  geom_histogram(binwidth = .02,
+                 colour = "black", fill = "white") +
+  geom_vline(aes(xintercept = -.029), 
+             colour = "#BB0000", linetype = "dashed") +
+  geom_vline(aes(xintercept = .18), 
+             colour = "#BB0000", linetype = "dashed") +
+  theme_minimal() +
+  xlim(-.3,.4) +
+  xlab("Util_Growth_6mo")
+
+# Printing both plots near each other
+MultiPlot(Util_growth.hist.plot, cols = 1)
+```
+
+![](Credit_Problem_1_EDA_files/figure-gfm/unnamed-chunk-66-1.png)<!-- -->
+
+**Util\_Growth\_6mo - bin analysis** - investigate binning options for
 variable split
 
 ``` r
@@ -1487,8 +1575,8 @@ U_Growth_bin_table
     ## 4             <= Inf       16773  55.9%   13686    3087 18.4%  23.0
     ## 6              Total       30000 100.0%   23364    6636 22.1%    NA
 
-**recommended transformation - Avg\_Pay\_Ratio** Create bins as per WOE
-max  
+**Util\_Growth\_6mo - recommended transformation** Create bins as per
+WOE max  
 Leave out \> .113 & \<= 1 as cross correlation would render this
 variable irrelevant.
 
@@ -1520,3 +1608,18 @@ summary(raw.data[,c('Util_Growth_6mo_below_minus.03',
     ##  Mean   :0.5591         
     ##  3rd Qu.:1.0000         
     ##  Max.   :1.0000
+
+These notebooks support analysis published in the [Summary: Model
+Development Guide
+(PDF)](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_4_Model_Development_Guide.pdf)
+
+**Below is a summary of the notebooks published in relation to this
+project:**
+
+  - [EDA & Data
+    Transformation](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md)
+    **(This Notebook)**  
+  - [Random Forest and Gradient Boosting
+    Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_2_Tree_Models.md)  
+  - [Regression and Principal Components
+    Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_3_Regression_Models.md)
