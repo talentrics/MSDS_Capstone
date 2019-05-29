@@ -12,7 +12,7 @@ The objective of this project is to demonstrate core MSDS programming and data a
    
 **Below is a summary of the notebooks published in relation to this project:**  
    
-* [EDA & Data Transformation](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md).  
+* [Exploratory Data Analysis & Transformation](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md).  
 * [Random Forest and Gradient Boosting Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_2_Tree_Models.md).    
 * [Regression and Principal Components Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_3_Regression_Models.md).  
     
