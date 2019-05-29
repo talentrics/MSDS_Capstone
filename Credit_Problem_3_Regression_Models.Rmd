@@ -1,7 +1,7 @@
 ---
 title: "Credit Problem - Regression & PCA"
 author: "Daniel Macdonald @talentrics"
-date: "5/21/2019"
+date: "5/28/2019"
 output: github_document
 ---
 
@@ -16,11 +16,24 @@ These notebooks support analysis published in the [Summary: Model Development Gu
     * [EDA & Data Transformation](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md){target="_blank"}         
     * [Random Forest and Gradient Boosting Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_2_Tree_Models.md){target="_blank"}   
     * [Regression and Principal Components Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_3_Regression_Models.md){target="_blank"} **(This Notebook)**    
-    * [Summary: Model Development Guide (PDF)](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_4_Model_Development_Guide.pdf){target="_blank"}   
 
-## Part 1 Data Overview
 
-Data installed from RData file saved on local computer.  The original file can be foud in [github repository/data.](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/data/credit_card_default.RData){target="_blank"}  Data Exploration and transformation is outlined in part 1 of this project - [posted here.](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md){target="_blank"}
+### Data Overview
+
+* Source: [‘Default of Credit Card Clients Data Set’](https://archive.ics.uci.edu/ml/datasets/default+of+credit+card+clients){target="_blank"} on UCI Machine Learning Repository.   
+* The data were provided by a bank in Taiwan in 2016 for purposes of 'default' prediction.
+* The data are 30,000 individual customer observations with 30 attributes.
+* Observations were over a six month period from April to September of 2005.
+* Attributes = available credit, gender, age, marital status, & bill payment. 
+* Response variable = 'DEFAULT' - did the customer default (1 = True).   
+   
+This notebook summarizes two modelling techniques: Logistic Regression and Principal Component Analysis (PCANNet)  
+EDA, Data Transformation, Linear modelling & PCA can be found in notebooks linked above.
+
+## Data Transformation
+
+Data installed from RData file saved on local computer.  The original file can be foud in [github repository/data.](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/data/credit_card_default.RData){target="_blank"}   
+Data Exploration and transformation is outlined in part 1 of this project - [posted here.](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md){target="_blank"}   
 ```{r setup, message=FALSE,warning=FALSE}
 # Read the RData object using readRDS();
 credit_card_default <- readRDS('/Users/talentrics/credit_card_default.RData')
@@ -30,16 +43,15 @@ raw.data <- credit_card_default
 colnames(raw.data)[which(colnames
     (raw.data) == 'PAY_0')] <- 'PAY_1'
 ```
-### Data Transformation
 
+**LIMIT_BAL - binned as per Weight of Evidence (WOE) analysis in data exploration**
 ```{r}
 #transform LIMIT_BAL as per optimal binning in Exploratory Data Analysis (EDA)
 raw.data$LIMIT_BAL_below_30k <- ifelse(raw.data$LIMIT_BAL <= 30000,1,0)
 raw.data$LIMIT_BAL_above_160k <- ifelse(raw.data$LIMIT_BAL > 160000,1,0)
 ```
 
-
-*variable transformation of demographic data**
+**Demographic data - SEX, MARRIAGE, & EDUCATION**
 ```{r message=FALSE,warning=FALSE}
 #transform SEX variable to SEX_FEMALE (1=true)
 raw.data$SEX_FEMALE <- ifelse(raw.data$SEX == 2,1,0)
@@ -51,14 +63,14 @@ raw.data$Married_Y <- ifelse(raw.data$MARRIAGE == 1,1,0)
 raw.data$EDUCATION[raw.data$EDUCATION > 3] <- 0
 ```
 
-**ED_Grad_Other**
+**ED_Grad_Other - binned as per Weight of Evidence (WOE) analysis in data exploration**
 ```{r}
 #transform EDUCATION as per optimal binning in Exploratory Data Analysis (EDA)
 raw.data$ED_Grad_other <- ifelse((raw.data$EDUCATION < 1) | 
                              (raw.data$EDUCATION > 3) |(raw.data$EDUCATION == 1),1,0)
 ```
 
-**AGE Bins**
+**AGE - binned as per Weight of Evidence (WOE) analysis in data exploration**
 ```{r}
 #transform AGE as per optimal binning in Exploratory Data Analysis (EDA)
 raw.data$AGE_below_25 <- ifelse(raw.data$AGE <= 25,1,0)
@@ -67,7 +79,7 @@ raw.data$AGE_25to35 <- ifelse((raw.data$AGE > 25) &
 raw.data$AGE_above_40 <- ifelse(raw.data$AGE > 40,1,0)
 ```
 
-**PAY_X_Sum_6mo Bins**
+**PAY_X_Sum_6mo - binned as per Weight of Evidence (WOE) analysis in data exploration**
 ```{r message=FALSE,warning=FALSE}
 #create sum variable of PAY_1 : PAY_6 variables
 raw.data$PAY_X_Sum_6mo <- rowSums(cbind(raw.data$PAY_1,raw.data$PAY_2,
@@ -79,7 +91,7 @@ raw.data$PAY_X_Sum_6mo_belowZero <- ifelse(raw.data$PAY_X_Sum_6mo <= 0,1,0)
 raw.data$PAY_X_Sum_6mo_aboveFive <- ifelse(raw.data$PAY_X_Sum_6mo > 5,1,0)
 ```
 
-**Max_Bill_Amt Bins**
+**Max_Bill_Amt - binned as per Weight of Evidence (WOE) analysis in data exploration**
 ```{r}
 #create variable of max value of BILL_AMT1 : BILL_AMT6
 raw.data$Max_Bill_Amt <- pmax(raw.data$BILL_AMT1,raw.data$BILL_AMT2,
@@ -98,7 +110,7 @@ raw.data$Max_Bill_Amt_above_52k <- ifelse(raw.data$Max_Bill_Amt > 52000,1,0)
 
 ```
 
-**Avg_Pmt_Amt Bins**
+**Avg_Pmt_Amt - binned as per Weight of Evidence (WOE) analysis in data exploration**
 ```{r}
 #create variable of sum value of PAY_AMT1 : PAY_AMT6
 raw.data$PMT_SUM <- rowSums(cbind(raw.data$PAY_AMT1,raw.data$PAY_AMT2,
@@ -131,6 +143,11 @@ raw.data$Util_SUM = rowSums(cbind(raw.data$Util_Bill_1,raw.data$Util_Bill_2,
 #take the average Utilization rate from Util_Bill_1 : Util_Bill_6
 raw.data$Avg_Util <- raw.data$Util_SUM/6
 
+
+```
+
+**AVG_Util - binned as per Weight of Evidence (WOE) analysis in data exploration**
+```{r}
 ## split Avg_Util as per optimal binning in Exploratory Data Analysis (EDA)
 raw.data$Avg_Util_below_.001 <- ifelse(raw.data$Avg_Util <= .001,1,0)
 raw.data$Avg_Util_above_.45 <- ifelse(raw.data$Avg_Util > .45,1,0)
@@ -155,7 +172,10 @@ raw.data$Ratio_SUM = rowSums(cbind(raw.data$Pay_Ratio_1,raw.data$Pay_Ratio_2,
                              raw.data$Pay_Ratio_5))
 
 raw.data$Avg_Pay_Ratio <- raw.data$Ratio_SUM/5
+```
 
+**AVG_Pay_Ratio - binned as per Weight of Evidence (WOE) analysis in data exploration**
+```{r}
 ## split Avg_Pay_Ratio as per optimal binning in Exploratory Data Analysis (EDA)
 raw.data$Avg_Pay_Ratio_below_.035 <- ifelse(raw.data$Avg_Pay_Ratio <= .035,1,0)
 raw.data$Avg_Pay_Ratio_above_.113 <- ifelse(raw.data$Avg_Pay_Ratio > .035 &
@@ -171,16 +191,23 @@ raw.data$Max_DLQa <- pmax(raw.data$PAY_1,raw.data$PAY_2,raw.data$PAY_3,
 
 #if Max_DLQa is below zero, set to zero, else max value of Max_DLQa
 raw.data$Max_DLQ <- ifelse(raw.data$Max_DLQa <= 0,0,raw.data$Max_DLQa)
+```
 
+**Max_DLQ - binned as per Weight of Evidence (WOE) analysis in data exploration**
+```{r}
 ## split Max_DLQ as per optimal binning in Exploratory Data Analysis (EDA)
 raw.data$Max_DLQ_above1 <- ifelse(raw.data$Max_DLQ > 1,1,0)
 ```
+
 
 **Balance_Growth_6mo - variable creation (∆ in difference from LIMIT_BAL to BILL_AMT over time)**
 ```{r message=FALSE,warning=FALSE}
 raw.data$Balance_Growth_6mo <- (raw.data$LIMIT_BAL-raw.data$BILL_AMT6)-
                           (raw.data$LIMIT_BAL-raw.data$BILL_AMT1)
+```
 
+**Balance_Growth_6mo - binned as per Weight of Evidence (WOE) analysis in data exploration**
+```{r}
 ## split Balance_Growth_6mo as per optimal binning in Exploratory Data Analysis (EDA)
 raw.data$Balance_Growth_6mo_below_minus21k <- ifelse(
                         raw.data$Balance_Growth_6mo <= -21800,1,0)
@@ -191,10 +218,13 @@ raw.data$Balance_Growth_6mo_above_1k <- ifelse(
                         raw.data$Balance_Growth_6mo >= 1000,1,0)
 ```
 
-**Util_Growth_6mo - variable creation (∆ in utilization Util_Bill_1 - Util_Bill_6)**
+**Util_Growth_6mo - variable creation (∆ in utilization Util_Bill_1:Util_Bill_6)**
 ```{r message=FALSE,warning=FALSE}
 raw.data$Util_Growth_6mo <- raw.data$Util_Bill_1 - raw.data$Util_Bill_6
+```
 
+**Util_Growth_6mo - binned as per Weight of Evidence (WOE) analysis in data exploration**
+```{r}
 # split Util_Growth_6mo as per optimal binning in Exploratory Data Analysis (EDA)
 raw.data$Util_Growth_6mo_below_minus.03 <- ifelse(
                             raw.data$Util_Growth_6mo <= -.03,1,0)
@@ -205,11 +235,12 @@ raw.data$Util_Growth_6mo_above_0 <- ifelse(
                             raw.data$Util_Growth_6mo > 0,1,0)
 ```
 
+**target - update default variable to factor for caret model training & fit**
 ```{r}
 raw.data$target <- as.factor(raw.data$DEFAULT)
 ```
 
-
+**Data for model prior to variable selection**      
 ```{r}
 sub_list_GLM <- c("LIMIT_BAL_below_30k","LIMIT_BAL_above_160k","SEX_FEMALE","ED_Grad_other",
               "Married_Y","AGE_below_25","AGE_25to35","AGE_above_40",
@@ -229,7 +260,7 @@ validate_GLM <- subset(raw.data, select = sub_list_GLM, data.group == 3)
 
 str(xtrain_GLM)
 ```
-##Variable selection
+##Full GLM model for variable importance analysis
 ```{r}
 library(MASS)
 full_glm <- glm(DEFAULT ~.,data=xtrain_GLM)
@@ -241,6 +272,8 @@ backward_glm <- stepAIC(full_glm,direction="backward",trace=FALSE)
 backward_glm$anova
 ```
 
+## Logistic Regression (Model 3)
+**data selection & train/test split**
 ```{r}
 sub_list_GLM2 <- c("LIMIT_BAL_below_30k","LIMIT_BAL_above_160k","SEX_FEMALE",
               "Married_Y","AGE_25to35","PAY_X_Sum_6mo_belowZero","PAY_X_Sum_6mo_aboveFive",
@@ -264,7 +297,7 @@ library(caret)
 library(tidyverse)
 library(pROC)
 ```
-**General Linear Model**
+**General Linear Model (GLM) train/fit**
 ```{r}
 control <- trainControl(method="repeatedcv", number=10, repeats=2, search="random")
 seed <- 7
@@ -272,7 +305,7 @@ set.seed(seed)
 fit.GLM2 <- train(target ~ .,data = xtrain_GLM2,family="binomial",method = "glm",trControl=control)
 ```
 
-
+**GLM performance - predicted classes for training (ROC)**
 ```{r}
 # Predicting probability of survival using predict type 'prob'
 predGLM2_prob <- predict(fit.GLM2, newdata = xtrain_GLM2, type = "prob")
@@ -309,7 +342,7 @@ plot(GLM2.roc2_train)
 auc(GLM2.roc2_train)
 ```
 
-
+**GLM performance - predicted classes for test (ROC)**
 ```{r}
 # Predicting probability of survival using predict type 'prob'
 predGLM2_test <- predict(fit.GLM2, newdata = xtest_GLM2, type = "prob")
@@ -345,7 +378,7 @@ GLM2.roc2_test <-roc(xtest_GLM2$target,xtest_GLM2$classes)
 plot(GLM2.roc2_test)
 auc(GLM2.roc2_test)
 ```
-
+**Variable importance for Model 4 selection**   
 ```{r}
 importance_GLM2 <- as.matrix(varImp(fit.GLM2)$importance)
 importance_t <- as.data.frame(importance_GLM2)
@@ -355,7 +388,7 @@ importance_t <- importance_t[order(-importance_t$Overall),]
 row.names(importance_t) <- NULL
 importance_t
 ```
-
+**plot importance from Model 3**   
 ```{r}
 library(ggplot2)
 ggplot(importance_t, aes(x=reorder(Variables, Overall), y=Overall)) + 
@@ -366,7 +399,10 @@ ggplot(importance_t, aes(x=reorder(Variables, Overall), y=Overall)) +
   xlab("Variable Name") +
   coord_flip()
 ```
-**create data set for Model 4 - PCANNet - remove cross correlated as per EDA**
+   
+## Principal Components & Neural Network - PCANNet (Model 4)    
+**data selection & train/test split**   
+**remove:** Avg_Util, Avg_Pay_Ratio & Util_Growth_6mo   
 ```{r}
 sub_list_PCA <- c("LIMIT_BAL_below_30k","LIMIT_BAL_above_160k","SEX_FEMALE",
               "Married_Y","AGE_25to35","PAY_X_Sum_6mo_belowZero","PAY_X_Sum_6mo_aboveFive",
@@ -380,15 +416,15 @@ validate_PCA <- subset(raw.data, select = sub_list_PCA, data.group == 3)
 
 str(xtrain_PCA)
 ```
-
-```{r}
+**Principal Components Analysis & Neural Network (PCANNet) train/fit**   
+```{r results='hide'}
 control <- trainControl(method="repeatedcv", number=10, repeats=2, search="random")
 seed <- 7
 set.seed(seed)
 fit.PCA <- train(target ~ .,data = xtrain_PCA,family="binomial",method = "pcaNNet",
                   trControl=control,verbose=FALSE)
 ```
-
+**PCANNet performance - predicted classes for training (ROC)**   
 ```{r}
 # Predicting probability of survival using predict type 'prob'
 predPCA_train <- predict(fit.PCA, newdata = xtrain_PCA, type = "prob")
@@ -425,7 +461,7 @@ plot(PCA.roc2_train)
 auc(PCA.roc2_train)
 ```
 
-
+**PCANNet performance - predicted classes for test (ROC)**
 ```{r}
 # Predicting probability of survival using predict type 'prob'
 predPCA_test <- predict(fit.PCA, newdata = xtest_PCA, type = "prob")
@@ -482,4 +518,9 @@ ggplot(importance_t, aes(x=reorder(Variables, X1), y=X1)) +
   coord_flip()
 ```
 
-
+These notebooks support analysis published in the [Summary: Model Development Guide (PDF)](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_4_Model_Development_Guide.pdf){target="_blank"} 
+   
+**Below is a summary of the notebooks published in relation to this project:**    
+    * [EDA & Data Transformation](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_1_EDA.md){target="_blank"}         
+    * [Random Forest and Gradient Boosting Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_2_Tree_Models.md){target="_blank"}   
+    * [Regression and Principal Components Analysis](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_3_Regression_Models.md){target="_blank"} **(This Notebook)**  

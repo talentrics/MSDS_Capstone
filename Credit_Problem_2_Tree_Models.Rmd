@@ -339,7 +339,7 @@ print(rf_random)
 plot(rf_random)
 ```
 
-## model RF2
+## Revised Random Forest Model
 ```{r}
 seed <- 7
 set.seed(seed)
