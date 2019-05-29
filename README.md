@@ -1,7 +1,7 @@
 # MSDS_Capstone
-Capstone project files for Northwestern University MSDS program (2019)
-Daniel Macdonald @talentrics
-May - 2019
+Capstone project files for Northwestern University MSDS program.  
+Daniel Macdonald @talentrics.  
+May - 2019.  
 
 ### Project Description
 
