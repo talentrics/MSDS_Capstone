@@ -25,9 +25,6 @@ The objective of this project is to demonstrate core MSDS programming and data a
 * Attributes = available credit, gender, age, marital status, & bill payment. 
 * Response variable = 'DEFAULT' - did the customer default (1 = True).   
    
-This notebook summarizes Exploratory Data Analysis and Data Tranformation.   
-Model development and testing of predictions in notebooks linked above.
-
 ### Raw Data Review
 
 Data installed from RData file saved on local computer.  File used for Capstone project is unique compared to raw data on UCI data to apply consistent train/test/validate split.  Project specific file can be found in the [github repository/data.](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/data/credit_card_default.RData) 
