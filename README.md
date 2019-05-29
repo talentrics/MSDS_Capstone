@@ -5,7 +5,7 @@ May - 2019.
 
 ### Project Description
 
-This project contains 3 R markdown notebooks published in support of my [MSDS Capstone Project](https://sps.northwestern.edu/masters/data-science/curriculum-specializations.php)at Northwestern University.   
+This project contains 3 R markdown notebooks published in support of my [MSDS Capstone Project](https://sps.northwestern.edu/masters/data-science/curriculum-specializations.php).      
 The objective of this project is to demonstrate core MSDS programming and data analysis skills. 
    
 These notebooks support analysis published in the [Summary: Model Development Guide (PDF)](https://github.com/talentrics/MSDS_Capstone_Project/blob/master/Credit_Problem_4_Model_Development_Guide.pdf)
